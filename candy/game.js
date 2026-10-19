@@ -535,18 +535,19 @@
     n.addEventListener('animationend', () => n.remove());
   }
   const LINES = {
-    t1: ['Sweet!', 'Yum!', 'Nice!'],
+    t1: ['Sweet!', 'Yum!', 'Nice!', 'Tasty!', 'Mmm!', 'Yummy!'],
+    t2: ['Scrumptious!', 'Luscious!', 'Delightful!', 'Splendid!', 'Juicy!', 'Dreamy!'],
+    t3: ['Delicious!', 'Heavenly!', 'Exquisite!', 'Dazzling!', 'Marvelous!', 'Glorious!'],
+    t4: ['Divine!', 'Sublime!', 'Legendary!', 'Majestic!', 'Unstoppable!', 'Spectacular!', 'Phenomenal!'],
     bad: ['Nope', 'Not there', 'Hmm...', 'Try again'],
     ouch: ['Ouch!', 'Sour!', 'That stings'],
     shift: ['Something changed...', 'New rule?', 'Rules shift...'],
   };
   let lastLine = '';
   function tierFor(streak) {
-    if (streak >= 5) return { cls: 't4', text: 'Divine!' };
-    if (streak === 4) return { cls: 't3', text: 'Delicious!' };
-    if (streak === 3) return { cls: 't2', text: 'Tasty!' };
-    const text = pick(LINES.t1, lastLine); lastLine = text;
-    return { cls: 't1', text };
+    const cls = streak >= 5 ? 't4' : streak === 4 ? 't3' : streak === 3 ? 't2' : 't1';
+    const text = pick(LINES[cls], lastLine); lastLine = text;
+    return { cls, text };
   }
 
   // ---------- Tutorial coaching ----------
