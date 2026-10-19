@@ -512,7 +512,10 @@
     if (shownScore !== S.score) { tweenScore(S.score); replay(el.score, 'bump'); }
     renderMulti();
     el.cardsLeft.textContent = L.trials - S.trials;
-    el.progress.style.width = `${(S.trials / L.trials) * 100}%`;
+    // Cards used, or rules cracked on levels that announce them (silent levels would leak the switch).
+    let p = S.trials / L.trials;
+    if (L.announce) p = Math.max(p, (S.categories + Math.min(S.run / S.criterion, 0.99)) / L.categories);
+    el.progress.style.width = `${(S.over ? 1 : Math.min(p, 0.99)) * 100}%`;
   }
   let toastTimer = 0;
   function toast(text, kind = 't1') {
@@ -917,6 +920,7 @@
     S.over = true; S.busy = true;
     timer.stop();
     clearTimeout(idleTimer); clearGuide();
+    renderHUD();
     el.coach.classList.add('hidden');
     const won = S.categories >= L.categories;
     const acc = S.trials ? Math.round((S.correct / S.trials) * 100) : 0;
