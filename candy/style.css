@@ -193,6 +193,18 @@ button { font: inherit; }
 .pip__svg { display: block; width: 100%; height: auto; overflow: visible; }
 .card .pip__svg { animation: jiggle 2.8s ease-in-out infinite; animation-delay: calc(var(--i) * -.7s); }
 
+/* ---------- Turn timer ring (timed levels) ---------- */
+.timer { position: absolute; inset: -9px; width: calc(100% + 18px); height: calc(100% + 18px); pointer-events: none; overflow: visible; }
+.timer.hidden { display: none; }
+.timer rect { fill: none; stroke-width: 5; stroke-linecap: round; }
+.timer__track { stroke: rgba(255,255,255,.14); }
+.timer__fill { stroke: var(--good); stroke-dasharray: 100; stroke-dashoffset: 0; transition: stroke .3s; }
+.timer.warn .timer__fill { stroke: var(--gold); }
+.timer.urgent .timer__fill { stroke: var(--bad); animation: urgent-pulse .45s ease-in-out infinite; }
+.stat--time.hidden { display: none; }
+.stat--time .stat__value { min-width: 2.2em; }
+.stat--time .stat__value.low { color: var(--bad); animation: urgent-pulse .45s ease-in-out infinite; }
+
 /* ---------- Center stack + card ---------- */
 .center { position: relative; width: var(--cw); height: var(--ch); }
 .card-wrap { position: absolute; inset: 0; animation: float 3.4s ease-in-out infinite; }
@@ -358,6 +370,7 @@ button { font: inherit; }
 }
 @keyframes hint-pulse { 0%, 100% { transform: scale(1); box-shadow: 0 12px 30px rgba(0,0,0,.35), 0 0 0 rgba(253,224,71,0); } 50% { transform: scale(1.06); box-shadow: 0 12px 30px rgba(0,0,0,.35), 0 0 34px rgba(253,224,71,.6); } }
 @keyframes cue-strong { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
+@keyframes urgent-pulse { 50% { opacity: .45; } }
 @keyframes ready-wiggle { 0%, 100% { transform: scale(1.12) rotate(-1.5deg); } 50% { transform: scale(1.16) rotate(1.5deg); } }
 @keyframes nudge {
   0%, 100% { transform: translate(0, 0) rotate(0); }

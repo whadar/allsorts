@@ -11,6 +11,8 @@
     { id: 2, name: 'Silent Switch',  tagline: 'Rules change without warning.',          criterion: 4,      categories: 3, trials: 32, announce: false, pips: false, guided: false, penalty: 0 },
     { id: 3, name: 'Shifting Sands', tagline: 'Rules change after 2 to 5 sorts.',       criterion: [2, 5], categories: 4, trials: 32, announce: false, pips: false, guided: false, penalty: 0 },
     { id: 4, name: 'Sweet Six',      tagline: 'Six piles, six colors, six shapes.',     criterion: [2, 5], categories: 4, trials: 32, announce: false, pips: false, guided: false, penalty: 0, piles: 6 },
+    // timer: seconds per card at the start, the floor, and how much is shaved off every card.
+    { id: 5, name: 'Rush Hour',      tagline: 'Beat the clock. It keeps shrinking.',    criterion: [2, 5], categories: 4, trials: 32, announce: false, pips: false, guided: false, penalty: 0, piles: 6, timer: { start: 6, min: 2.2, step: 0.15 } },
   ];
   const BASE_POINTS = 10;
   const MULT_CAP = 5;
@@ -162,7 +164,7 @@
   const $ = id => document.getElementById(id);
   const el = {
     score: $('score'), multi: $('multi'), pips: $('pips'), streakNum: $('streak-num'), stars: $('stars'), cardsLeft: $('cards-left'),
-    progress: $('progress'), mute: $('mute'), hud: document.querySelector('.hud'), levelChip: $('level-chip'), ruleChip: $('rule-chip'),
+    progress: $('progress'), mute: $('mute'), timeStat: $('time-stat'), time: $('time'), timer: $('timer'), timerRect: $('timer-rect'), hud: document.querySelector('.hud'), levelChip: $('level-chip'), ruleChip: $('rule-chip'),
     table: $('table'), coach: $('coach'), coachText: $('coach-text'),
     board: $('board'), center: $('center'), wrap: $('card-wrap'), toast: $('toast'), toastTxt: $('toast-txt'),
     startOverlay: $('start-overlay'), levels: $('levels'), voiceMode: $('voice-mode'),
@@ -576,7 +578,7 @@
     Object.assign(S, {
       deck: buildDeck(), deckPos: 0, card: null, cardEl: null,
       ruleIdx: Math.floor(Math.random() * RULES.length), prevRule: null, criterion: 0,
-      run: 0, streak: 0, bestStreak: 0, categories: 0, trials: 0, correct: 0, errors: 0, persev: 0, lost: 0,
+      run: 0, streak: 0, bestStreak: 0, categories: 0, trials: 0, correct: 0, errors: 0, persev: 0, lost: 0, timeouts: 0,
       score: 0, busy: true, over: false, lastWasShift: false, shiftHintGiven: false, coachNext: null,
     });
     S.criterion = newCriterion();
@@ -592,6 +594,61 @@
       S.deckPos = 0;
     }
     return S.deck[S.deckPos++];
+  }
+
+  // ---------- Turn timer ----------
+  const timer = {
+    raf: 0, ends: 0, total: 0, active: false, lastTick: 0,
+    start(sec) {
+      this.total = sec; this.ends = performance.now() + sec * 1000; this.active = true; this.lastTick = Math.ceil(sec);
+      el.timer.classList.remove('warn', 'urgent');
+      cancelAnimationFrame(this.raf);
+      this.raf = requestAnimationFrame(t => this.tick(t));
+    },
+    stop() { this.active = false; cancelAnimationFrame(this.raf); el.timer.classList.remove('urgent'); el.time.classList.remove('low'); },
+    tick(now) {
+      if (!this.active) return;
+      const left = Math.max(0, (this.ends - now) / 1000);
+      const frac = left / this.total;
+      el.timerRect.style.strokeDashoffset = (100 * (1 - frac)).toFixed(2);
+      el.time.textContent = left.toFixed(1);
+      el.time.classList.toggle('low', left < 2);
+      el.timer.classList.toggle('warn', frac < 0.5 && frac >= 0.25);
+      el.timer.classList.toggle('urgent', frac < 0.25);
+      const c = Math.ceil(left);
+      if (c < this.lastTick && c <= 3 && c > 0) { sound.tick(); this.lastTick = c; }
+      if (left <= 0) { this.stop(); timeOut(); return; }
+      this.raf = requestAnimationFrame(t => this.tick(t));
+    },
+  };
+  function sizeTimer() {
+    const w = el.wrap.offsetWidth + 18, h = el.wrap.offsetHeight + 18;
+    el.timer.setAttribute('viewBox', `0 0 ${w} ${h}`);
+    for (const r of el.timer.querySelectorAll('rect')) { r.setAttribute('x', 3); r.setAttribute('y', 3); r.setAttribute('width', w - 6); r.setAttribute('height', h - 6); r.setAttribute('rx', 24); }
+  }
+  window.addEventListener('resize', () => { if (L.timer) sizeTimer(); });
+  const turnSeconds = () => Math.max(L.timer.min, L.timer.start - L.timer.step * S.trials);
+  async function timeOut() {
+    if (S.busy || S.over || !S.cardEl) return;
+    S.busy = true;
+    const card = S.cardEl; S.cardEl = null;
+    clearTimeout(idleTimer); clearGuide();
+    S.trials++; S.errors++; S.timeouts++; S.run = 0; S.streak = 0; S.coachNext = 'wrong';
+    for (const d of DIRS) { targets[d].style.setProperty('--hot', '0'); targets[d].classList.remove('ready'); }
+    card.classList.remove('dragging');
+    card.style.transform = '';
+    card.animate([
+      { transform: 'scale(1)', opacity: 1 },
+      { transform: 'scale(1.06) rotate(-3deg)', opacity: 1, offset: 0.3 },
+      { transform: 'scale(.5) rotate(4deg)', opacity: 0 },
+    ], { duration: D(480), easing: 'ease-in', fill: 'forwards' });
+    el.wrap.classList.add('empty');
+    toast('Too slow!', 'bad');
+    sound.bad(); buzz([30, 40, 30]); shake(false);
+    renderPips(); renderHUD();
+    await wait(D(720) + 40);
+    card.remove();
+    deal();
   }
 
   // ---------- Idle hint ----------
@@ -631,6 +688,7 @@
     if (L.guided) guide();
     S.busy = false;
     armIdle();
+    if (L.timer) timer.start(turnSeconds());
   }
 
   // ---------- Drag to sort ----------
@@ -711,6 +769,7 @@
   async function commit(dir) {
     if (S.busy || S.over || !S.cardEl) return;
     S.busy = true;
+    timer.stop();
     const card = S.cardEl; S.cardEl = null;
     const target = targets[dir];
     const key = KEYS[DIRS.indexOf(dir)];
@@ -825,6 +884,10 @@
     progress.p.last = L.id; progress.save();
     sound.ensure(); sound.pop(); voice.load();
     buildBoard(L.piles || 4);
+    timer.stop();
+    el.timeStat.classList.toggle('hidden', !L.timer);
+    el.timer.classList.toggle('hidden', !L.timer);
+    if (L.timer) { sizeTimer(); el.time.textContent = L.timer.start.toFixed(1); el.timerRect.style.strokeDashoffset = '0'; }
     reset();
     el.levelChip.textContent = L.id === 0 ? 'Tutorial' : `Level ${L.id} · ${L.name}`;
     el.ruleChip.classList.toggle('on', false);
@@ -854,6 +917,7 @@
   }
   async function endGame() {
     S.over = true; S.busy = true;
+    timer.stop();
     clearTimeout(idleTimer); clearGuide();
     el.coach.classList.add('hidden');
     const won = S.categories >= L.categories;
@@ -878,7 +942,7 @@
     el.endUnlock.textContent = unlockedNow ? `🔓 Level ${nextId} unlocked: ${LEVELS[nextId].name}` : '';
     el.endUnlock.classList.toggle('hidden', !unlockedNow);
     const rows = [[0, 'Score'], [`${acc}%`, 'Accuracy'], [`${S.categories}/${L.categories}`, 'Rules cracked'], [S.bestStreak, 'Best streak'], [S.trials, 'Cards sorted']];
-    rows.push(L.penalty ? [`-${S.lost}`, 'Lost to mistakes'] : [S.persev, 'Stuck on old rule']);
+    rows.push(L.timer ? [S.timeouts, 'Timed out'] : L.penalty ? [`-${S.lost}`, 'Lost to mistakes'] : [S.persev, 'Stuck on old rule']);
     el.endResults.innerHTML = rows.map(([v, l], i) =>
       `<div class="result" style="--i:${i}"><div class="result__value">${v}</div><div class="result__label">${l}</div></div>`).join('');
     endStarEls.forEach((s, i) => { s.classList.remove('lit'); s.style.display = i < L.categories ? '' : 'none'; });
@@ -913,7 +977,7 @@
   el.nextBtn.addEventListener('click', () => startGame(L.id + 1));
   el.againBtn.addEventListener('click', () => startGame(L.id));
   el.levelsBtn.addEventListener('click', showLevels);
-  $('home-btn').addEventListener('click', () => { sound.pop(); clearTimeout(idleTimer); S.over = true; showLevels(); });
+  $('home-btn').addEventListener('click', () => { sound.pop(); clearTimeout(idleTimer); timer.stop(); S.over = true; showLevels(); });
 
   const KEY_DIR = { ArrowUp: 'up', ArrowLeft: 'left', ArrowRight: 'right', ArrowDown: 'down', w: 'up', a: 'left', d: 'right', s: 'down' };
   document.addEventListener('keydown', e => {
@@ -931,5 +995,5 @@
 
   renderLevels();
   reset();
-  if (location.search.includes('debug')) window.sweetSort = { state: S, level: () => L, LEVELS, deal, commit, endGame, crackRule, toast, shake, voice, armIdle, startGame, progress };
+  if (location.search.includes('debug')) window.sweetSort = { state: S, level: () => L, LEVELS, timer, deal, commit, endGame, crackRule, toast, shake, voice, armIdle, startGame, progress };
 })();

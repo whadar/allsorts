@@ -20,6 +20,7 @@ rule, and then it silently changes.
   | 2 | Silent Switch | Rules change with no celebration, like the original test. |
   | 3 | Shifting Sands | Four rules, each needing a random 2 to 5 correct sorts before it changes. |
   | 4 | Sweet Six | Six piles instead of four: six colors, six shapes, counts up to six. |
+  | 5 | Rush Hour | Six piles plus a countdown per card that shrinks every turn. Running out counts as a miss. |
 
   The announcer clips in `candy/voice/` were rendered with macOS `say` (Daniel voice); the
   browser's speech synthesis is used only if a clip fails to load.
