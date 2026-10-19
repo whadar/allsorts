@@ -767,7 +767,9 @@
       drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, t: performance.now(), vx: 0, vy: 0, dir: null, ready: false };
       // Where each pile sits relative to the card, so a slide picks the pile closest to its angle.
       const w = el.wrap.getBoundingClientRect();
-      drag.angles = DIRS.map(d => { const r = targets[d].getBoundingClientRect(); return { d, a: Math.atan2(r.top + r.height / 2 - (w.top + w.height / 2), r.left + r.width / 2 - (w.left + w.width / 2)) }; });
+      drag.angles = DIRS.map(d => { const r = targets[d].getBoundingClientRect(); const dx = r.left + r.width / 2 - (w.left + w.width / 2), dy = r.top + r.height / 2 - (w.top + w.height / 2); return { d, a: Math.atan2(dy, dx), dist: Math.hypot(dx, dy) }; });
+      // On small boards the piles are close, so a sort commits at a fraction of the pile distance.
+      drag.commitAt = Math.min(SWIPE_COMMIT, 0.62 * Math.min(...drag.angles.map(p => p.dist)));
       try { card.setPointerCapture(e.pointerId); } catch (err) { /* synthetic pointer */ }
       clearTimeout(idleTimer);
       card.classList.remove('nudge');
@@ -789,7 +791,7 @@
         let best = Infinity;
         for (const p of drag.angles) { const diff = Math.abs(Math.atan2(Math.sin(a - p.a), Math.cos(a - p.a))); if (diff < best) { best = diff; dir = p.d; } }
       }
-      const heat = clamp((mag - DEAD_ZONE) / (SWIPE_COMMIT - DEAD_ZONE), 0, 1);
+      const heat = clamp((mag - DEAD_ZONE) / (drag.commitAt - DEAD_ZONE), 0, 1);
       if (dir !== drag.dir) { if (dir) sound.tick(); drag.dir = dir; drag.ready = false; }
       for (const d of DIRS) {
         targets[d].style.setProperty('--hot', d === dir ? heat.toFixed(3) : '0');
@@ -803,7 +805,7 @@
       const dx = drag.x - drag.x0, dy = drag.y - drag.y0;
       const mag = Math.hypot(dx, dy), speed = Math.hypot(drag.vx, drag.vy);
       const dir = drag.dir;
-      const commitIt = dir && (mag >= SWIPE_COMMIT || (mag >= DEAD_ZONE * 3 && speed >= FLICK_SPEED));
+      const commitIt = dir && (mag >= drag.commitAt || (mag >= DEAD_ZONE * 3 && speed >= FLICK_SPEED));
       drag = null;
       card.classList.remove('dragging');
       for (const d of DIRS) { targets[d].style.setProperty('--hot', '0'); targets[d].classList.remove('ready'); }
