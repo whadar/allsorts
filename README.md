@@ -19,7 +19,7 @@ rule, and then it silently changes.
   | 1 | Sweet Start | Four correct in a row cracks a rule, three rules, with fanfare. |
   | 2 | Silent Switch | Rules change with no celebration, like the original test. |
   | 3 | Shifting Sands | Four rules, each needing a random 2 to 5 correct sorts before it changes. |
-  | 4 | Sour Notes | Mistakes cost 15 points. |
+  | 4 | Sweet Six | Six piles instead of four: six colors, six shapes, counts up to six. |
 
   The announcer clips in `candy/voice/` were rendered with macOS `say` (Daniel voice); the
   browser's speech synthesis is used only if a clip fails to load.

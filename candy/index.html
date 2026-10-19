@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=4">
+  <link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
 <div class="app">
@@ -39,23 +39,15 @@
   <main class="table" id="table">
     <div class="coach hidden" id="coach" role="status" aria-live="polite"><span class="coach__icon">🍭</span><span id="coach-text"></span></div>
     <div class="board" id="board">
-      <div class="target" data-dir="up" style="--i:0" role="img" aria-label="Up pile"><span class="ring"></span><span class="pips-area"></span><span class="chev"></span></div>
-      <div class="target" data-dir="left" style="--i:1" role="img" aria-label="Left pile"><span class="ring"></span><span class="pips-area"></span><span class="chev"></span></div>
       <div class="center" id="center">
         <div class="toast" id="toast"><span class="toast__txt" id="toast-txt" data-text=""></span></div>
         <div class="card-wrap" id="card-wrap">
           <div class="stack-card"></div>
           <div class="stack-card"></div>
         </div>
-        <span class="cue cue--up"></span>
-        <span class="cue cue--left"></span>
-        <span class="cue cue--right"></span>
-        <span class="cue cue--down"></span>
       </div>
-      <div class="target" data-dir="right" style="--i:2" role="img" aria-label="Right pile"><span class="ring"></span><span class="pips-area"></span><span class="chev"></span></div>
-      <div class="target" data-dir="down" style="--i:3" role="img" aria-label="Down pile"><span class="ring"></span><span class="pips-area"></span><span class="chev"></span></div>
     </div>
-    <p class="hint">Slide the card toward a pile <span class="hint__sep">·</span> or use the arrow keys</p>
+    <p class="hint">Slide the card toward a pile · or press 1 to 4</p>
   </main>
 
   <div class="overlay" id="start-overlay">
@@ -88,6 +80,6 @@
 
   <canvas id="fx" aria-hidden="true"></canvas>
 </div>
-<script src="game.js?v=4"></script>
+<script src="game.js?v=5"></script>
 </body>
 </html>

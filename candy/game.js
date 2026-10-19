@@ -10,7 +10,7 @@
     { id: 1, name: 'Sweet Start',    tagline: 'Crack three rules. Fanfare included.',   criterion: 4,      categories: 3, trials: 32, announce: true,  pips: true,  guided: false, penalty: 0 },
     { id: 2, name: 'Silent Switch',  tagline: 'Rules change without warning.',          criterion: 4,      categories: 3, trials: 32, announce: false, pips: false, guided: false, penalty: 0 },
     { id: 3, name: 'Shifting Sands', tagline: 'Rules change after 2 to 5 sorts.',       criterion: [2, 5], categories: 4, trials: 32, announce: false, pips: false, guided: false, penalty: 0 },
-    { id: 4, name: 'Sour Notes',     tagline: 'Mistakes cost 15 points.',               criterion: [2, 5], categories: 4, trials: 32, announce: false, pips: false, guided: false, penalty: 15 },
+    { id: 4, name: 'Sweet Six',      tagline: 'Six piles, six colors, six shapes.',     criterion: [2, 5], categories: 4, trials: 32, announce: false, pips: false, guided: false, penalty: 0, piles: 6 },
   ];
   const BASE_POINTS = 10;
   const MULT_CAP = 5;
@@ -25,11 +25,21 @@
     lime:   { light: '#c6ffdd', base: '#3ddc84', dark: '#0b6b3c' },
     lemon:  { light: '#fff6b8', base: '#ffd23f', dark: '#b06f00' },
     berry:  { light: '#c2dcff', base: '#3a8dff', dark: '#122f8f' },
+    orange: { light: '#ffd9b0', base: '#ff8a3d', dark: '#9a3d00' },
+    grape:  { light: '#e9cbff', base: '#b14cff', dark: '#5a1596' },
   };
-  const COLOR_LIST = ['cherry', 'lime', 'lemon', 'berry'];
-  const SHAPE_LIST = ['gem', 'star', 'heart', 'orb'];
-  const DIRS = ['up', 'left', 'right', 'down'];
-  const KEYS = DIRS.map((dir, i) => ({ dir, color: COLOR_LIST[i], shape: SHAPE_LIST[i], count: i + 1 }));
+  const COLOR_LIST = ['cherry', 'lime', 'lemon', 'berry', 'orange', 'grape'];
+  const SHAPE_LIST = ['gem', 'star', 'heart', 'orb', 'ring', 'tri'];
+  // Pile layouts on the 3x3 board grid: four on the sides, or six on the corners and sides.
+  const LAYOUTS = {
+    4: [{ dir: 'up', area: '1 / 2', vec: [0, -1] }, { dir: 'left', area: '2 / 1', vec: [-1, 0] }, { dir: 'right', area: '2 / 3', vec: [1, 0] }, { dir: 'down', area: '3 / 2', vec: [0, 1] }],
+    6: [{ dir: 'up-left', area: '1 / 1', vec: [-1, -1] }, { dir: 'up-right', area: '1 / 3', vec: [1, -1] }, { dir: 'left', area: '2 / 1', vec: [-1, 0] },
+        { dir: 'right', area: '2 / 3', vec: [1, 0] }, { dir: 'down-left', area: '3 / 1', vec: [-1, 1] }, { dir: 'down-right', area: '3 / 3', vec: [1, 1] }],
+  };
+  let LAYOUT = LAYOUTS[4];
+  let DIRS = LAYOUT.map(l => l.dir);
+  let KEYS = DIRS.map((dir, i) => ({ dir, color: COLOR_LIST[i], shape: SHAPE_LIST[i], count: i + 1 }));
+  const unitVec = dir => { const [x, y] = LAYOUT.find(l => l.dir === dir).vec; const n = Math.hypot(x, y); return [x / n, y / n]; };
   const RULES = ['color', 'shape', 'count'];
   const RULE_WORD = { color: 'COLOR', shape: 'SHAPE', count: 'NUMBER' };
 
@@ -73,9 +83,28 @@
       <ellipse cx="33" cy="33" rx="12" ry="7" fill="url(#gloss)" transform="rotate(-32 33 33)"/>
       <circle cx="26" cy="45" r="3" fill="#fff" opacity=".85"/>
       <path d="M32 68 Q50 90 66 70" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width="3" stroke-linecap="round"/>`,
+    ring: (c, k) => `
+      <ellipse cx="52" cy="95" rx="34" ry="6" fill="#000" opacity=".2"/>
+      <path d="M50 10 A40 40 0 1 0 50 90 A40 40 0 1 0 50 10 Z M50 34 A16 16 0 1 1 50 66 A16 16 0 1 1 50 34 Z" fill="url(#g-${c})" fill-rule="evenodd"/>
+      <path d="M50 10 A40 40 0 1 0 50 90 A40 40 0 1 0 50 10 Z M50 34 A16 16 0 1 1 50 66 A16 16 0 1 1 50 34 Z" fill="url(#shade)" fill-rule="evenodd"/>
+      <circle cx="50" cy="50" r="40" fill="none" stroke="${k.dark}" stroke-opacity=".7" stroke-width="3"/>
+      <circle cx="50" cy="50" r="16" fill="none" stroke="${k.dark}" stroke-opacity=".5" stroke-width="2.5"/>
+      <ellipse cx="34" cy="26" rx="12" ry="6" fill="url(#gloss)" transform="rotate(-35 34 26)"/>
+      <circle cx="26" cy="42" r="3" fill="#fff" opacity=".85"/>`,
+    tri: (c, k) => `
+      <ellipse cx="52" cy="94" rx="34" ry="6" fill="#000" opacity=".2"/>
+      <polygon points="50,10 92,86 8,86" fill="url(#g-${c})" stroke="url(#g-${c})" stroke-width="10" stroke-linejoin="round"/>
+      <polygon points="50,10 92,86 8,86" fill="url(#shade)" stroke="url(#shade)" stroke-width="10" stroke-linejoin="round"/>
+      <polygon points="50,10 92,86 8,86" fill="none" stroke="${k.dark}" stroke-opacity=".75" stroke-width="3" stroke-linejoin="round"/>
+      <polygon points="50,22 60,42 40,42" fill="#fff" opacity=".55"/>
+      <ellipse cx="38" cy="52" rx="8" ry="4" fill="url(#gloss)" transform="rotate(-30 38 52)"/>
+      <circle cx="34" cy="62" r="2.5" fill="#fff" opacity=".9"/>`,
   };
-  const PIP_LAYOUT = { 1: [[50, 50]], 2: [[50, 30], [50, 70]], 3: [[30, 26], [50, 50], [70, 74]], 4: [[31, 30], [69, 30], [31, 70], [69, 70]] };
-  const PIP_SIZE = { 1: 60, 2: 42, 3: 38, 4: 40 };
+  const PIP_LAYOUT = {
+    1: [[50, 50]], 2: [[50, 30], [50, 70]], 3: [[30, 26], [50, 50], [70, 74]], 4: [[31, 30], [69, 30], [31, 70], [69, 70]],
+    5: [[28, 28], [72, 28], [50, 50], [28, 72], [72, 72]], 6: [[32, 22], [68, 22], [32, 50], [68, 50], [32, 78], [68, 78]],
+  };
+  const PIP_SIZE = { 1: 60, 2: 42, 3: 38, 4: 40, 5: 34, 6: 30 };
 
   (function installDefs() {
     const grads = Object.entries(COLORS).map(([name, c]) => `
@@ -120,7 +149,8 @@
 
   function buildDeck() {
     const deck = [];
-    for (let c = 0; c < 4; c++) for (let s = 0; s < 4; s++) for (let n = 0; n < 4; n++) {
+    const N = KEYS.length;
+    for (let c = 0; c < N; c++) for (let s = 0; s < N; s++) for (let n = 0; n < N; n++) {
       if (c === s || s === n || c === n) continue;
       deck.push({ color: COLOR_LIST[c], shape: SHAPE_LIST[s], count: n + 1 });
     }
@@ -137,11 +167,10 @@
     board: $('board'), center: $('center'), wrap: $('card-wrap'), toast: $('toast'), toastTxt: $('toast-txt'),
     startOverlay: $('start-overlay'), levels: $('levels'), voiceMode: $('voice-mode'),
     endOverlay: $('end-overlay'), endEyebrow: $('end-eyebrow'), endTitle: $('end-title'), endStars: $('end-stars'),
-    endRank: $('end-rank'), endUnlock: $('end-unlock'), endResults: $('end-results'),
+    endRank: $('end-rank'), endUnlock: $('end-unlock'), endResults: $('end-results'), hint: document.querySelector('.hint'),
     nextBtn: $('next-btn'), againBtn: $('again-btn'), levelsBtn: $('levels-btn'),
   };
-  const targets = Object.fromEntries(DIRS.map(d => [d, el.board.querySelector(`.target[data-dir="${d}"]`)]));
-  const cues = Object.fromEntries(DIRS.map(d => [d, el.center.querySelector(`.cue--${d}`)]));
+  let targets = {}, cues = {};
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const D = ms => (reduceMotion ? 0 : ms);
   const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -372,10 +401,38 @@
     }
     $('bg-candies').innerHTML = html;
   })();
-  for (const key of KEYS) {
-    targets[key.dir].querySelector('.pips-area').innerHTML = pipsHTML(key);
-    targets[key.dir].setAttribute('aria-label', `${key.dir} pile: ${describe(key)}`);
+  function buildBoard(n) {
+    LAYOUT = LAYOUTS[n] || LAYOUTS[4];
+    DIRS = LAYOUT.map(l => l.dir);
+    KEYS = DIRS.map((dir, i) => ({ dir, color: COLOR_LIST[i], shape: SHAPE_LIST[i], count: i + 1 }));
+    el.board.querySelectorAll('.target').forEach(t => t.remove());
+    el.center.querySelectorAll('.cue').forEach(c => c.remove());
+    targets = {}; cues = {};
+    LAYOUT.forEach((l, i) => {
+      const [ux, uy] = unitVec(l.dir);
+      const ang = Math.atan2(uy, ux) * 180 / Math.PI;
+      const t = document.createElement('div');
+      t.className = 'target';
+      t.dataset.dir = l.dir;
+      t.setAttribute('role', 'img');
+      t.setAttribute('aria-label', `${l.dir} pile: ${describe(KEYS[i])}`);
+      t.style.gridArea = l.area;
+      t.style.setProperty('--i', i);
+      t.style.setProperty('--lx', (-ux).toFixed(3));
+      t.style.setProperty('--ly', (-uy).toFixed(3));
+      t.innerHTML = `<span class="ring"></span><span class="pips-area">${pipsHTML(KEYS[i])}</span>` +
+        `<span class="chev" style="left:${50 - ux * 50}%;top:${50 - uy * 50}%;transform:translate(-50%,-50%) rotate(${ang - 45}deg)"></span>`;
+      el.board.insertBefore(t, el.center);
+      targets[l.dir] = t;
+      const c = document.createElement('span');
+      c.className = 'cue';
+      c.style.cssText = `left:${50 + ux * 62}%;top:${50 + uy * 60}%;transform:translate(-50%,-50%) rotate(${ang - 45}deg);animation-delay:${(i * 0.3).toFixed(1)}s`;
+      el.center.appendChild(c);
+      cues[l.dir] = c;
+    });
+    el.hint.textContent = `Slide the card toward a pile · or press 1 to ${DIRS.length}`;
   }
+  buildBoard(4);
   const pipDots = [];
   el.stars.innerHTML = STAR_ICON.repeat(6);
   el.endStars.innerHTML = STAR_ICON.repeat(6);
@@ -544,7 +601,7 @@
     idleTimer = setTimeout(() => {
       const card = S.cardEl;
       if (!card || S.busy || S.over || reduceMotion) return;
-      const [nx, ny] = L.guided ? { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[correctDir()] : rand([[0, -1], [0, 1], [-1, 0], [1, 0]]);
+      const [nx, ny] = unitVec(L.guided ? correctDir() : rand(DIRS));
       card.style.setProperty('--nx', nx); card.style.setProperty('--ny', ny);
       replay(card, 'nudge');
       card.addEventListener('animationend', () => card.classList.remove('nudge'), { once: true });
@@ -582,6 +639,9 @@
     const onDown = e => {
       if (S.busy || drag) return;
       drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, t: performance.now(), vx: 0, vy: 0, dir: null, ready: false };
+      // Where each pile sits relative to the card, so a slide picks the pile closest to its angle.
+      const w = el.wrap.getBoundingClientRect();
+      drag.angles = DIRS.map(d => { const r = targets[d].getBoundingClientRect(); return { d, a: Math.atan2(r.top + r.height / 2 - (w.top + w.height / 2), r.left + r.width / 2 - (w.left + w.width / 2)) }; });
       try { card.setPointerCapture(e.pointerId); } catch (err) { /* synthetic pointer */ }
       clearTimeout(idleTimer);
       card.classList.remove('nudge');
@@ -597,7 +657,12 @@
       const dx = drag.x - drag.x0, dy = drag.y - drag.y0;
       const mag = Math.hypot(dx, dy);
       card.style.transform = `translate(${dx}px, ${dy}px) rotate(${clamp(dx * 0.08, -14, 14)}deg) scale(1.05)`;
-      const dir = mag < DEAD_ZONE ? null : (Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
+      let dir = null;
+      if (mag >= DEAD_ZONE) {
+        const a = Math.atan2(dy, dx);
+        let best = Infinity;
+        for (const p of drag.angles) { const diff = Math.abs(Math.atan2(Math.sin(a - p.a), Math.cos(a - p.a))); if (diff < best) { best = diff; dir = p.d; } }
+      }
       const heat = clamp((mag - DEAD_ZONE) / (SWIPE_COMMIT - DEAD_ZONE), 0, 1);
       if (dir !== drag.dir) { if (dir) sound.tick(); drag.dir = dir; drag.ready = false; }
       for (const d of DIRS) {
@@ -759,6 +824,7 @@
     L = LEVELS[clamp(levelId, 0, LEVELS.length - 1)] || LEVELS[1];
     progress.p.last = L.id; progress.save();
     sound.ensure(); sound.pop(); voice.load();
+    buildBoard(L.piles || 4);
     reset();
     el.levelChip.textContent = L.id === 0 ? 'Tutorial' : `Level ${L.id} · ${L.name}`;
     el.ruleChip.classList.toggle('on', false);
@@ -856,8 +922,10 @@
     const endUp = !el.endOverlay.classList.contains('hidden');
     if (startUp) { if (e.key === 'Enter') { e.preventDefault(); startGame(progress.p.last); } return; }
     if (endUp) { if (e.key === 'Enter') { e.preventDefault(); (el.nextBtn.classList.contains('hidden') ? el.againBtn : el.nextBtn).click(); } return; }
-    const dir = KEY_DIR[e.key] || KEY_DIR[e.key.toLowerCase()];
-    if (dir) { e.preventDefault(); el.center.classList.add('touched'); commit(dir); }
+    let dir = KEY_DIR[e.key] || KEY_DIR[e.key.toLowerCase()];
+    const num = Number(e.key);
+    if (num >= 1 && num <= DIRS.length) dir = DIRS[num - 1];
+    if (dir && DIRS.includes(dir)) { e.preventDefault(); el.center.classList.add('touched'); commit(dir); }
     if (e.key === 'm' || e.key === 'M') sound.toggle();
   });
 

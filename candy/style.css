@@ -139,11 +139,7 @@ button { font: inherit; }
   gap: var(--gap);
   place-items: center;
 }
-.target[data-dir="up"]    { grid-area: 1 / 2; }
-.target[data-dir="left"]  { grid-area: 2 / 1; }
-.center                   { grid-area: 2 / 2; }
-.target[data-dir="right"] { grid-area: 2 / 3; }
-.target[data-dir="down"]  { grid-area: 3 / 2; }
+.center { grid-area: 2 / 2; }
 .board.in .target { animation: tile-in .65s cubic-bezier(.2, 1.5, .4, 1) both; animation-delay: calc(var(--i) * 70ms); }
 .board.in .center { animation: tile-in .65s cubic-bezier(.2, 1.5, .4, 1) 280ms both; }
 
@@ -163,10 +159,6 @@ button { font: inherit; }
     inset 0 1px 0 rgba(255,255,255,.25);
   transition: transform .12s ease-out, box-shadow .12s, background .12s, border-color .12s;
 }
-.target[data-dir="up"]    { --lx: 0; --ly: 1; }
-.target[data-dir="down"]  { --lx: 0; --ly: -1; }
-.target[data-dir="left"]  { --lx: 1; --ly: 0; }
-.target[data-dir="right"] { --lx: -1; --ly: 0; }
 .target .pips-area {
   position: absolute; inset: 16px; transform-origin: 50% 70%;
   transform: translate(calc(var(--lx) * var(--hot) * 7px), calc(var(--ly) * var(--hot) * 7px)) scale(calc(1 + .1 * var(--hot)));
@@ -180,10 +172,6 @@ button { font: inherit; }
   border-right: 2.5px solid rgba(255,255,255,.55); border-bottom: 2.5px solid rgba(255,255,255,.55);
   opacity: calc(.5 + .5 * var(--hot));
 }
-.target[data-dir="up"] .chev    { left: 50%; bottom: -1px; transform: translate(-50%, 50%) rotate(-135deg); }
-.target[data-dir="down"] .chev  { left: 50%; top: -1px; transform: translate(-50%, -50%) rotate(45deg); }
-.target[data-dir="left"] .chev  { top: 50%; right: -1px; transform: translate(50%, -50%) rotate(-45deg); }
-.target[data-dir="right"] .chev { top: 50%; left: -1px; transform: translate(-50%, -50%) rotate(135deg); }
 
 .target.hit-good { animation: target-good .7s cubic-bezier(.2, 1.4, .4, 1); }
 .target.hit-good .ring { animation: ring .7s ease-out; }
@@ -249,10 +237,6 @@ button { font: inherit; }
   border-right: 3px solid rgba(255,255,255,.7); border-bottom: 3px solid rgba(255,255,255,.7);
   opacity: 0; animation: cue 1.6s ease-in-out infinite;
 }
-.cue--up    { left: 50%; top: -26px;  transform: translateX(-50%) rotate(-135deg); }
-.cue--down  { left: 50%; bottom: -26px; transform: translateX(-50%) rotate(45deg); animation-delay: .4s; }
-.cue--left  { top: 50%; left: -26px;  transform: translateY(-50%) rotate(135deg); animation-delay: .8s; }
-.cue--right { top: 50%; right: -26px; transform: translateY(-50%) rotate(-45deg); animation-delay: 1.2s; }
 .center.touched .cue { display: none; }
 
 /* ---------- Chunky outlined display text (toast + titles) ---------- */
