@@ -170,7 +170,7 @@
     startOverlay: $('start-overlay'), levels: $('levels'),
     endOverlay: $('end-overlay'), endEyebrow: $('end-eyebrow'), endTitle: $('end-title'), endStars: $('end-stars'),
     endRank: $('end-rank'), endUnlock: $('end-unlock'), endResults: $('end-results'), hint: document.querySelector('.hint'),
-    nextBtn: $('next-btn'), againBtn: $('again-btn'), levelsBtn: $('levels-btn'),
+    nextBtn: $('next-btn'), againBtn: $('again-btn'), levelsBtn: $('levels-btn'), shareBtn: $('share-btn'),
   };
   let targets = {}, cues = {};
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -980,6 +980,26 @@
   el.nextBtn.addEventListener('click', () => startGame(L.id + 1));
   el.againBtn.addEventListener('click', () => startGame(L.id));
   el.levelsBtn.addEventListener('click', showLevels);
+
+  // Share the result: native share sheet where it exists, otherwise copy the text.
+  function shareText() {
+    const acc = S.trials ? Math.round((S.correct / S.trials) * 100) : 0;
+    const where = L.id === 0 ? 'the tutorial' : `level ${L.id} (${L.name})`;
+    return `I scored ${S.score} on ${where} of Sweet Sort: ${S.categories}/${L.categories} rules cracked, ${acc}% accuracy, best streak ${S.bestStreak}. Can you beat it?`;
+  }
+  async function shareResult() {
+    const url = location.origin + location.pathname.replace(/[^/]*$/, '');
+    const text = shareText();
+    const flash = label => { el.shareBtn.textContent = label; setTimeout(() => { el.shareBtn.textContent = 'Share'; }, 1600); };
+    sound.pop();
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Sweet Sort', text, url }); flash('Shared!'); return; }
+      catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    try { await navigator.clipboard.writeText(`${text} ${url}`); flash('Copied!'); }
+    catch (e) { flash('Copy failed'); }
+  }
+  el.shareBtn.addEventListener('click', shareResult);
   $('home-btn').addEventListener('click', () => { sound.pop(); clearTimeout(idleTimer); timer.stop(); S.over = true; showLevels(); });
 
   const KEY_DIR = { ArrowUp: 'up', ArrowLeft: 'left', ArrowRight: 'right', ArrowDown: 'down', w: 'up', a: 'left', d: 'right', s: 'down' };
@@ -998,5 +1018,5 @@
 
   renderLevels();
   reset();
-  if (location.search.includes('debug')) window.sweetSort = { state: S, level: () => L, LEVELS, timer, deal, commit, endGame, crackRule, toast, shake, voice, armIdle, startGame, progress };
+  if (location.search.includes('debug')) window.sweetSort = { state: S, level: () => L, LEVELS, timer, shareText, deal, commit, endGame, crackRule, toast, shake, voice, armIdle, startGame, progress };
 })();
