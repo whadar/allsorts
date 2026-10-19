@@ -167,7 +167,7 @@
     progress: $('progress'), mute: $('mute'), timeStat: $('time-stat'), time: $('time'), timer: $('timer'), timerRect: $('timer-rect'), hud: document.querySelector('.hud'), levelChip: $('level-chip'), ruleChip: $('rule-chip'),
     table: $('table'), coach: $('coach'), coachText: $('coach-text'),
     board: $('board'), center: $('center'), wrap: $('card-wrap'), toast: $('toast'), toastTxt: $('toast-txt'),
-    startOverlay: $('start-overlay'), levels: $('levels'), voiceMode: $('voice-mode'),
+    startOverlay: $('start-overlay'), levels: $('levels'),
     endOverlay: $('end-overlay'), endEyebrow: $('end-eyebrow'), endTitle: $('end-title'), endStars: $('end-stars'),
     endRank: $('end-rank'), endUnlock: $('end-unlock'), endResults: $('end-results'), hint: document.querySelector('.hint'),
     nextBtn: $('next-btn'), againBtn: $('again-btn'), levelsBtn: $('levels-btn'),
@@ -325,8 +325,6 @@
     },
   };
   if ('speechSynthesis' in window) speechSynthesis.addEventListener('voiceschanged', () => { voice.picked = voice.pickVoice(); });
-  el.voiceMode.checked = voice.enabled;
-  el.voiceMode.addEventListener('change', () => { voice.enabled = el.voiceMode.checked; localStorage.setItem('sweetsort-voice', voice.enabled ? 'on' : 'off'); });
 
   // ---------- Particles ----------
   const fx = (() => {
