@@ -62,6 +62,10 @@ button { font: inherit; }
   position: sticky; top: 0; z-index: 5;
 }
 .brand { font-weight: 700; font-size: 1.15rem; white-space: nowrap; letter-spacing: .01em; display: flex; align-items: center; gap: 8px; }
+.brand__home { background: none; border: 0; padding: 0; color: inherit; font: inherit; font-weight: 700; cursor: pointer; border-radius: 8px; transition: transform .12s; }
+.brand__home:hover { transform: scale(1.04); }
+.brand__home:active { transform: scale(.97); }
+.brand__home:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
 .level-chip { font-size: .72rem; font-weight: 600; padding: 2px 9px; border-radius: 999px; background: rgba(255,255,255,.12); color: var(--muted); letter-spacing: .04em; }
 .level-chip:empty { display: none; }
 .rule-chip { display: none; font-size: .72rem; font-weight: 700; padding: 2px 9px; border-radius: 999px; background: linear-gradient(90deg, #fde047, #f59e0b); color: #78350f; letter-spacing: .06em; }

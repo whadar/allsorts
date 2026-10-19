@@ -36,7 +36,9 @@ button { font: inherit; }
   border-bottom: 1px solid var(--line);
   position: sticky; top: 0; z-index: 5;
 }
-.brand { font-weight: 800; font-size: 1.1rem; letter-spacing: .2px; white-space: nowrap; }
+.brand { font-weight: 800; font-size: 1.1rem; letter-spacing: .2px; white-space: nowrap; background: none; border: 0; padding: 0; color: inherit; font-family: inherit; cursor: pointer; border-radius: 8px; transition: transform .12s; }
+.brand:hover { transform: scale(1.04); }
+.brand:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .brand__icon { display: inline-block; transform: rotate(-8deg); }
 .stats { display: flex; gap: 8px; margin-left: auto; flex-wrap: wrap; justify-content: flex-end; }
 .stat {

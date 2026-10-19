@@ -500,6 +500,11 @@
   }
 
   el.startBtn.addEventListener('click', startGame);
+  document.getElementById('home-btn').addEventListener('click', () => {
+    S.over = true; S.busy = true;
+    el.endOverlay.classList.add('hidden');
+    el.startOverlay.classList.remove('hidden');
+  });
   el.againBtn.addEventListener('click', startGame);
 
   document.addEventListener('keydown', e => {

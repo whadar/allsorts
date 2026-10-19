@@ -843,6 +843,7 @@
   el.nextBtn.addEventListener('click', () => startGame(L.id + 1));
   el.againBtn.addEventListener('click', () => startGame(L.id));
   el.levelsBtn.addEventListener('click', showLevels);
+  $('home-btn').addEventListener('click', () => { sound.pop(); clearTimeout(idleTimer); S.over = true; showLevels(); });
 
   const KEY_DIR = { ArrowUp: 'up', ArrowLeft: 'left', ArrowRight: 'right', ArrowDown: 'down', w: 'up', a: 'left', d: 'right', s: 'down' };
   document.addEventListener('keydown', e => {
