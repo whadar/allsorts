@@ -8,62 +8,33 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=14">
+  <link rel="stylesheet" href="style.css?v=6">
   <style>
-    .deck-wrap { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-    .deck { position: relative; flex: 1; min-height: 0; overflow: hidden; touch-action: pan-y; }
-    .slide {
-      position: absolute; inset: 0; display: grid; place-items: center; padding: 18px 16px 12px;
-      opacity: 0; transform: translateX(70px) scale(.97); pointer-events: none;
-      transition: opacity .45s ease, transform .45s cubic-bezier(.2, .9, .2, 1);
-    }
-    .slide.active { opacity: 1; transform: none; pointer-events: auto; }
-    .slide.before { transform: translateX(-70px) scale(.97); }
-    .card-panel {
-      width: min(720px, 100%); max-height: 100%; overflow-y: auto;
+    .about { flex: 1; display: flex; justify-content: center; padding: 28px 16px 48px; }
+    .article {
+      width: min(680px, 100%);
       background: linear-gradient(170deg, #ffffff, #fdf4ff); color: var(--ink);
-      border-radius: 28px; padding: 30px 34px 28px;
+      border-radius: 28px; padding: 32px 32px 28px;
       box-shadow: 0 30px 80px rgba(0,0,0,.55), inset 0 0 0 2px rgba(255,255,255,.8);
-      line-height: 1.55; font-size: 1.08rem;
+      animation: panel-in .5s cubic-bezier(.2, 1.3, .4, 1);
+      line-height: 1.55; font-size: 1.05rem;
     }
-    .card-panel.center { text-align: center; }
+    .article h1 { margin: 6px 0 4px; font-size: 2.4rem; font-weight: 700; line-height: 1.1; filter: drop-shadow(0 4px 0 rgba(59,7,100,.25)); }
+    .article h2 { margin: 30px 0 8px; font-size: 1.25rem; font-weight: 700; color: #4c1d95; }
+    .article p { margin: 0 0 12px; color: #3b2d57; }
+    .article ul { margin: 0 0 12px; padding-left: 22px; color: #3b2d57; }
+    .article li { margin-bottom: 6px; }
+    .article a { color: #7c3aed; font-weight: 600; text-decoration: none; border-bottom: 2px solid #ddd6fe; }
+    .article a:hover { border-color: #7c3aed; }
     .eyebrow { text-transform: uppercase; letter-spacing: .18em; font-size: .72rem; color: #7c3aed; font-weight: 700; }
-    .slide h1 { margin: 6px 0 10px; font-size: clamp(2.2rem, 7vw, 3.4rem); font-weight: 700; line-height: 1.05; filter: drop-shadow(0 4px 0 rgba(59,7,100,.25)); }
-    .slide h2 { margin: 6px 0 14px; font-size: clamp(1.7rem, 5vw, 2.3rem); font-weight: 700; line-height: 1.1; filter: drop-shadow(0 4px 0 rgba(59,7,100,.25)); }
-    .slide p { margin: 0 0 12px; color: #3b2d57; }
-    .slide ul { margin: 0; padding-left: 22px; color: #3b2d57; }
-    .slide li { margin-bottom: 10px; }
-    .slide a { color: #7c3aed; font-weight: 600; text-decoration: none; border-bottom: 2px solid #ddd6fe; }
-    .slide a:hover { border-color: #7c3aed; }
-    .lead { font-size: 1.2rem; color: #5b4a7a !important; }
-    .pull { margin: 14px 0; padding: 14px 18px; border-radius: 16px; background: #f5f3ff; border-left: 4px solid #a855f7; color: #3b2d57; font-weight: 600; font-size: 1.15rem; }
-    .hero { display: flex; justify-content: center; gap: 14px; margin: 6px 0 14px; }
-    .hero svg { width: 64px; height: 64px; overflow: visible; animation: hero-bob 3s ease-in-out infinite alternate; }
-    .hero svg:nth-child(2) { animation-delay: -.8s; } .hero svg:nth-child(3) { animation-delay: -1.6s; } .hero svg:nth-child(4) { animation-delay: -2.4s; }
-    .people { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; text-align: left; }
+    .lead { font-size: 1.15rem; color: #5b4a7a !important; }
+    .pull { margin: 16px 0; padding: 14px 18px; border-radius: 16px; background: #f5f3ff; border-left: 4px solid #a855f7; color: #3b2d57; font-weight: 500; }
+    .people { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
     .people li { display: flex; flex-direction: column; background: #f5f3ff; border-radius: 14px; padding: 10px 14px; }
     .people small { color: #7c6a9c; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; font-size: .68rem; }
-    .links { list-style: none; padding: 0; text-align: left; }
-    .links li { background: #f5f3ff; border-radius: 14px; padding: 10px 14px; }
-    .cta { margin-top: 18px; }
-    .slide .cta .btn { text-decoration: none; display: inline-block; color: #fff; border-bottom: 0; }
-
-    .deck-nav { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 8px 16px 18px; }
-    .nav-btn {
-      width: 48px; height: 48px; border-radius: 50%; border: 1px solid rgba(255,255,255,.22);
-      background: rgba(255,255,255,.14); color: #fff; font-size: 1.6rem; line-height: 1; cursor: pointer;
-      box-shadow: 0 4px 0 rgba(0,0,0,.25); transition: transform .12s, background .12s;
-    }
-    .nav-btn:hover { background: rgba(255,255,255,.24); transform: translateY(-2px); }
-    .nav-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,.25); }
-    .nav-btn:disabled { opacity: .3; cursor: default; transform: none; }
-    .dots { display: flex; gap: 7px; }
-    .dot { width: 9px; height: 9px; border-radius: 50%; border: 0; padding: 0; background: rgba(255,255,255,.28); cursor: pointer; transition: transform .2s, background .2s; }
-    .dot.on { background: var(--gold); box-shadow: 0 0 10px var(--gold); transform: scale(1.3); }
-    .counter { font-size: .8rem; color: var(--muted); font-weight: 600; min-width: 3.2em; text-align: center; font-variant-numeric: tabular-nums; }
-    .key-hint { display: none; font-size: .78rem; color: rgba(255,255,255,.5); margin-left: 6px; }
-    @media (hover: hover) and (min-width: 700px) { .key-hint { display: inline; } }
-    @media (max-width: 480px) { .card-panel { padding: 22px 20px 20px; font-size: 1rem; border-radius: 22px; } .slide { padding: 12px 12px 8px; } }
+    .cta { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 28px; }
+    .article .cta .btn { text-decoration: none; display: inline-block; color: #fff; border-bottom: 0; }
+    @media (max-width: 480px) { .article { padding: 24px 20px 22px; font-size: 1rem; } .article h1 { font-size: 1.9rem; } }
   </style>
 </head>
 <body>
@@ -72,168 +43,56 @@
     <div class="brand"><a class="brand__home" href="./" title="Back to the game" style="text-decoration:none">🍬 Sweet Sort</a><span class="level-chip">About</span></div>
   </header>
 
-  <div class="deck-wrap">
-    <div class="deck" id="deck" aria-live="polite">
+  <main class="about">
+    <article class="article">
+      <div class="eyebrow">Built at the Sheba ARC Healthcare Game Jam</div>
+      <h1><span class="title-txt" data-text="About Sweet Sort">About Sweet Sort</span></h1>
+      <p class="lead">A short, replayable game about noticing when the rules have changed, built as a playful cousin of two classic tests of cognitive flexibility.</p>
 
-      <section class="slide" data-title="Sweet Sort">
-        <div class="card-panel center">
-          <div class="hero" id="hero" aria-hidden="true"></div>
-          <div class="eyebrow">Built at the Sheba ARC Healthcare Game Jam</div>
-          <h1><span class="title-txt" data-text="Sweet Sort">Sweet Sort</span></h1>
-          <p class="lead">A short, replayable game about noticing when the rules have changed, built as a playful cousin of two classic tests of cognitive flexibility.</p>
-          <p style="color:#7c6a9c;font-size:.9rem;margin-top:16px">Swipe or use the arrows to read on.</p>
-        </div>
-      </section>
+      <h2>Why cognitive flexibility</h2>
+      <p>The research of C.BIRD's Dr. Abigail Livny-Ezer and Jenya Lerer examines cognitive flexibility, the ability to change strategy, shift attention and adapt when rules or circumstances change, as a possible protective factor against chronic pain. Studies have shown that patients with higher cognitive flexibility are more resilient and cope better with pain.</p>
 
-      <section class="slide" data-title="Why cognitive flexibility">
-        <div class="card-panel">
-          <div class="eyebrow">1 · The problem</div>
-          <h2><span class="title-txt" data-text="Why cognitive flexibility">Why cognitive flexibility</span></h2>
-          <p>The research of C.BIRD's Dr. Abigail Livny-Ezer and Jenya Lerer examines cognitive flexibility, the ability to change strategy, shift attention and adapt when rules or circumstances change, as a possible protective factor against chronic pain.</p>
-          <p>Studies have shown that patients with higher cognitive flexibility are more resilient and cope better with pain.</p>
-        </div>
-      </section>
+      <h2>From clinical tests to play</h2>
+      <p>Two established measures inspired the game: the Wisconsin Card Sorting Test and the CANTAB Intra-Extra Dimensional Set Shift. Both ask you to sort by a hidden rule, then quietly change the rule and watch how you adapt. Sweet Sort translates that idea into actual play rather than copying the test.</p>
 
-      <section class="slide" data-title="From clinical tests to play">
-        <div class="card-panel">
-          <div class="eyebrow">2 · The inspiration</div>
-          <h2><span class="title-txt" data-text="From tests to play">From tests to play</span></h2>
-          <p>Two established measures inspired the game: the Wisconsin Card Sorting Test and the CANTAB Intra-Extra Dimensional Set Shift.</p>
-          <p>Both ask you to sort by a hidden rule, then quietly change the rule and watch how you adapt. Sweet Sort translates that idea into actual play rather than copying the test.</p>
-        </div>
-      </section>
+      <h2>The big idea</h2>
+      <p>Could a short, replayable game train set-shifting and adaptive problem-solving without teaching someone to pass a specific clinical test? The key is that the game never announces a change. A simple mechanic might reward responding to red circles; at some point the rule quietly becomes blue, with no cue that anything has shifted.</p>
+      <div class="pull">What the game trains, and measures, is how fast the player discovers the new rule from feedback alone once the old one quietly stops working.</div>
+      <p>A richer version could silently change the relevant feature, action, goal or environmental logic, so that noticing the shift and re-deriving the rule is the core challenge.</p>
 
-      <section class="slide" data-title="The big idea">
-        <div class="card-panel">
-          <div class="eyebrow">3 · The big idea</div>
-          <h2><span class="title-txt" data-text="Never announce the change">Never announce the change</span></h2>
-          <p>Could a short, replayable game train set-shifting and adaptive problem-solving without teaching someone to pass a specific clinical test? The key is that the game never announces a change. A simple mechanic might reward responding to red circles; at some point the rule quietly becomes blue, with no cue that anything has shifted.</p>
-          <div class="pull">What the game trains, and measures, is how fast the player discovers the new rule from feedback alone once the old one quietly stops working.</div>
-          <p>A richer version could silently change the relevant feature, action, goal or environmental logic, so that noticing the shift and re-deriving the rule is the core challenge.</p>
-        </div>
-      </section>
+      <h2>What we built</h2>
+      <ul>
+        <li><strong>One mechanic.</strong> A card of sweets appears in the middle. A hidden rule, color, shape or number, decides which pile it belongs on. You slide it and get instant feedback: a chime or a buzz.</li>
+        <li><strong>Silent shifts.</strong> After a run of correct sorts the rule changes. The first level celebrates the change so you learn the loop. From level 2 on, nothing on screen gives it away. Sensing that your strategy stopped working is the whole game.</li>
+        <li><strong>Rising pressure.</strong> Later levels change the rule after an unpredictable number of sorts, grow the board from four piles to six with new colors and shapes, and put a shrinking clock on every card.</li>
+        <li><strong>A game, not a test.</strong> A guided tutorial, streak multipliers, combo callouts and a candy world make it something you want to replay, which is what makes repeated practice possible.</li>
+        <li><strong>Measurement built in.</strong> Every run ends with accuracy, best streak, rules cracked and how often the old rule was still being applied, the perseverative errors that clinical tests look for.</li>
+      </ul>
 
-      <section class="slide" data-title="What we built">
-        <div class="card-panel">
-          <div class="eyebrow">4 · What we built</div>
-          <h2><span class="title-txt" data-text="One mechanic, silent shifts">One mechanic, silent shifts</span></h2>
-          <ul>
-            <li><strong>One mechanic.</strong> A card of sweets appears in the middle. A hidden rule, color, shape or number, decides which pile it belongs on. You slide it and get instant feedback: a chime or a buzz.</li>
-            <li><strong>Silent shifts.</strong> After a run of correct sorts the rule changes. The first level celebrates the change so you learn the loop. From level 2 on, nothing on screen gives it away. Sensing that your strategy stopped working is the whole game.</li>
-            <li><strong>Rising pressure.</strong> Later levels change the rule after an unpredictable number of sorts, grow the board from four piles to six with new colors and shapes, and put a shrinking clock on every card.</li>
-          </ul>
-        </div>
-      </section>
+      <h2>What it lets patients do</h2>
+      <ul>
+        <li>Practice set-shifting in sessions of a couple of minutes, on a phone, with nothing to install or set up.</li>
+        <li>Build up difficulty at their own pace. Each level unlocks the next, and best scores are kept on the device.</li>
+        <li>Meet a test-like task as play, which takes away the anxiety and fatigue that make test performance noisy.</li>
+      </ul>
 
-      <section class="slide" data-title="A game, not a test">
-        <div class="card-panel">
-          <div class="eyebrow">5 · What we built</div>
-          <h2><span class="title-txt" data-text="A game, not a test">A game, not a test</span></h2>
-          <ul>
-            <li><strong>Built to replay.</strong> A guided tutorial, streak multipliers, combo callouts and a candy world make it something you want to play again, which is what makes repeated practice possible.</li>
-            <li><strong>Measurement built in.</strong> Every run ends with accuracy, best streak, rules cracked and how often the old rule was still being applied, the perseverative errors that clinical tests look for.</li>
-          </ul>
-        </div>
-      </section>
+      <h2>Learn more</h2>
+      <ul>
+        <li><a href="https://medicalgamejam.pages.dev/problems/cognitive-flexibility-pain-resilience">Cognitive flexibility and pain resilience</a>, the problem brief from the game jam.</li>
+        <li><a href="https://www.cbirdcenter.com/">C.BIRD, the Clinical Brain Imaging R&amp;D Center</a> at Sheba, whose research the game builds on.</li>
+      </ul>
 
-      <section class="slide" data-title="What it lets patients do">
-        <div class="card-panel">
-          <div class="eyebrow">6 · For patients</div>
-          <h2><span class="title-txt" data-text="What it lets patients do">What it lets patients do</span></h2>
-          <ul>
-            <li>Practice set-shifting in sessions of a couple of minutes, on a phone, with nothing to install or set up.</li>
-            <li>Build up difficulty at their own pace, with best scores kept on the device.</li>
-            <li>Meet a test-like task as play, which takes away the anxiety and fatigue that make test performance noisy.</li>
-          </ul>
-        </div>
-      </section>
+      <h2>Team</h2>
+      <ul class="people">
+        <li><small>Developers</small><span><a href="https://www.linkedin.com/in/ariel-laden">Ariel Laden</a> and <a href="https://www.linkedin.com/in/whadar">Hadar Weiss</a></span></li>
+        <li><small>Reviewing scientists</small><span>Dr. Abigail Livny-Ezer and Jenya Lerer, C.BIRD, Clinical Brain Imaging R&amp;D Center</span></li>
+      </ul>
 
-      <section class="slide" data-title="Learn more and team">
-        <div class="card-panel center">
-          <div class="eyebrow">7 · Learn more</div>
-          <h2><span class="title-txt" data-text="Team and links">Team and links</span></h2>
-          <ul class="links">
-            <li><a href="https://medicalgamejam.pages.dev/problems/cognitive-flexibility-pain-resilience">Cognitive flexibility and pain resilience</a>, the problem brief from the game jam.</li>
-            <li><a href="https://www.cbirdcenter.com/">C.BIRD, the Clinical Brain Imaging R&amp;D Center</a> at Sheba, whose research the game builds on.</li>
-          </ul>
-          <ul class="people">
-            <li><small>Developers</small><span><a href="https://www.linkedin.com/in/ariel-laden">Ariel Laden</a> and <a href="https://www.linkedin.com/in/whadar">Hadar Weiss</a></span></li>
-            <li><small>Reviewing scientists</small><span>Dr. Abigail Livny-Ezer and Jenya Lerer, C.BIRD, Clinical Brain Imaging R&amp;D Center</span></li>
-          </ul>
-          <div class="cta"><a class="btn btn--primary" href="./">Play Sweet Sort</a></div>
-        </div>
-      </section>
-
-    </div>
-
-    <nav class="deck-nav" aria-label="Slides">
-      <button class="nav-btn" id="prev" aria-label="Previous slide">‹</button>
-      <div class="dots" id="dots"></div>
-      <span class="counter" id="counter"></span>
-      <button class="nav-btn" id="next" aria-label="Next slide">›</button>
-      <span class="key-hint">← → keys</span>
-    </nav>
-  </div>
+      <div class="cta">
+        <a class="btn btn--primary" href="./">Play Sweet Sort</a>
+      </div>
+    </article>
+  </main>
 </div>
-
-<script>
-(() => {
-  const slides = Array.from(document.querySelectorAll('.slide'));
-  const dots = document.getElementById('dots');
-  const counter = document.getElementById('counter');
-  const prev = document.getElementById('prev'), next = document.getElementById('next');
-  let i = Math.min(slides.length - 1, Math.max(0, (parseInt(location.hash.slice(1), 10) || 1) - 1));
-
-  slides.forEach((_, k) => {
-    const d = document.createElement('button');
-    d.className = 'dot'; d.setAttribute('aria-label', `Slide ${k + 1}`);
-    d.addEventListener('click', () => go(k));
-    dots.appendChild(d);
-  });
-  function go(k) {
-    i = Math.min(slides.length - 1, Math.max(0, k));
-    slides.forEach((s, j) => { s.classList.toggle('active', j === i); s.classList.toggle('before', j < i); });
-    dots.querySelectorAll('.dot').forEach((d, j) => d.classList.toggle('on', j === i));
-    counter.textContent = `${i + 1} / ${slides.length}`;
-    prev.disabled = i === 0; next.disabled = i === slides.length - 1;
-    history.replaceState(null, '', '#' + (i + 1));
-    document.title = i === 0 ? 'About Sweet Sort' : `${slides[i].dataset.title} · About Sweet Sort`;
-  }
-  prev.addEventListener('click', () => go(i - 1));
-  next.addEventListener('click', () => go(i + 1));
-  document.addEventListener('keydown', e => {
-    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(i + 1); }
-    if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(i - 1); }
-    if (e.key === 'Home') go(0);
-    if (e.key === 'End') go(slides.length - 1);
-  });
-  // Swipe between slides.
-  const deck = document.getElementById('deck');
-  let sx = 0, sy = 0, swiping = false;
-  deck.addEventListener('pointerdown', e => { sx = e.clientX; sy = e.clientY; swiping = true; });
-  deck.addEventListener('pointerup', e => {
-    if (!swiping) return; swiping = false;
-    const dx = e.clientX - sx, dy = e.clientY - sy;
-    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) go(i + (dx < 0 ? 1 : -1));
-  });
-  window.addEventListener('hashchange', () => go((parseInt(location.hash.slice(1), 10) || 1) - 1));
-
-  // Four sweets on the title slide, drawn with the game's own art.
-  const hero = document.getElementById('hero');
-  const g = (id, light, base, dark) => `<radialGradient id="${id}" cx="35%" cy="28%" r="78%"><stop offset="0" stop-color="${light}"/><stop offset=".42" stop-color="${base}"/><stop offset="1" stop-color="${dark}"/></radialGradient>`;
-  const defs = `<svg width="0" height="0" style="position:absolute"><defs>${g('a-cherry', '#ffb3c1', '#ff3b5c', '#8f0a2e')}${g('a-lime', '#c6ffdd', '#3ddc84', '#0b6b3c')}${g('a-lemon', '#fff6b8', '#ffd23f', '#b06f00')}${g('a-berry', '#c2dcff', '#3a8dff', '#122f8f')}<linearGradient id="a-gloss" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs></svg>`;
-  const STAR = '50,4 61.2,34.6 93.8,35.8 68.1,55.9 77,87.2 50,69 23,87.2 31.9,55.9 6.2,35.8 38.8,34.6';
-  const HEART = 'M50 90 C22 68 4 50 10 30 C15 13 38 9 50 27 C62 9 85 13 90 30 C96 50 78 68 50 90 Z';
-  const sweets = [
-    `<polygon points="50,5 88,38 50,96 12,38" fill="url(#a-cherry)" stroke="#8f0a2e" stroke-opacity=".75" stroke-width="3" stroke-linejoin="round"/><polygon points="50,5 32,38 68,38" fill="#fff" opacity=".4"/><polygon points="50,11 58,24 42,24" fill="#fff" opacity=".9"/>`,
-    `<polygon points="${STAR}" fill="url(#a-lime)" stroke="#0b6b3c" stroke-opacity=".75" stroke-width="3" stroke-linejoin="round"/><polygon points="50,14 56,33 44,33" fill="#fff" opacity=".6"/>`,
-    `<path d="${HEART}" fill="url(#a-lemon)" stroke="#b06f00" stroke-opacity=".75" stroke-width="3" stroke-linejoin="round"/><ellipse cx="33" cy="33" rx="12" ry="7" fill="url(#a-gloss)" transform="rotate(-32 33 33)"/>`,
-    `<circle cx="50" cy="52" r="40" fill="url(#a-berry)" stroke="#122f8f" stroke-opacity=".7" stroke-width="3"/><ellipse cx="37" cy="33" rx="15" ry="9" fill="url(#a-gloss)" transform="rotate(-28 37 33)"/>`,
-  ];
-  document.body.insertAdjacentHTML('afterbegin', defs);
-  hero.innerHTML = sweets.map(s => `<svg viewBox="0 0 100 100">${s}</svg>`).join('');
-  go(i);
-})();
-</script>
 </body>
 </html>
