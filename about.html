@@ -10,7 +10,16 @@
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css?v=6">
   <style>
-    .about { flex: 1; display: flex; justify-content: center; padding: 28px 16px 48px; }
+    .about { flex: 1; display: flex; justify-content: center; padding: 28px 16px 48px; cursor: pointer; }
+    .article { cursor: auto; position: relative; }
+    .close-x {
+      position: absolute; top: 14px; right: 14px; width: 40px; height: 40px; border-radius: 50%; border: 0;
+      background: #f5f3ff; color: #4c1d95; font-size: 1.5rem; line-height: 1; cursor: pointer;
+      box-shadow: 0 3px 0 #ddd6fe; transition: transform .12s, background .12s;
+    }
+    .close-x:hover { background: #ede9fe; transform: scale(1.06); }
+    .close-x:active { transform: translateY(2px); box-shadow: 0 1px 0 #ddd6fe; }
+    .close-x:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
     .article {
       width: min(680px, 100%);
       background: linear-gradient(170deg, #ffffff, #fdf4ff); color: var(--ink);
@@ -45,6 +54,7 @@
 
   <main class="about">
     <article class="article">
+      <button class="close-x" id="close-x" aria-label="Close and return to the game" title="Close">×</button>
       <div class="eyebrow">Built at the Sheba ARC Healthcare Game Jam</div>
       <h1><span class="title-txt" data-text="About Sweet Sort">About Sweet Sort</span></h1>
       <p class="lead">A short, replayable game about noticing when the rules have changed, built as a playful cousin of two classic tests of cognitive flexibility.</p>
@@ -94,5 +104,18 @@
     </article>
   </main>
 </div>
+<script>
+  // Tapping the dark backdrop, the X, or pressing Escape returns to the game.
+  (() => {
+    const back = () => {
+      let sameSite = false;
+      try { sameSite = document.referrer && new URL(document.referrer).origin === location.origin && history.length > 1; } catch (e) { /* ignore */ }
+      if (sameSite) history.back(); else location.href = "./";
+    };
+    document.getElementById("close-x").addEventListener("click", back);
+    document.querySelector(".about").addEventListener("click", e => { if (e.target === e.currentTarget) back(); });
+    document.addEventListener("keydown", e => { if (e.key === "Escape") back(); });
+  })();
+</script>
 </body>
 </html>

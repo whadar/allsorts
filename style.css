@@ -129,7 +129,11 @@ button { font: inherit; }
 .center .cue.on { display: block !important; opacity: 1; border-color: var(--gold); animation: cue-strong .9s ease-in-out infinite; }
 
 /* ---------- Board ---------- */
-.table { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 18px 16px 28px; }
+/* The board centers itself with auto margins rather than justify-content, so when the screen is
+   too short it overflows downward (scrollable) instead of sliding up under the sticky header. */
+.table { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 18px; padding: 18px 16px 28px; }
+.play { display: flex; flex-direction: column; align-items: center; gap: 18px; margin: auto 0; }
+.coach { margin-top: auto; }
 .table.shake { animation: shake-screen .4s ease-in-out; }
 .table.shake-big { animation: shake-screen-big .55s ease-in-out; }
 .board {
@@ -469,10 +473,16 @@ body.menu .table, body.menu .stats, body.menu .progress { visibility: hidden; }
 /* ---------- Responsive ---------- */
 @media (max-width: 480px) {
   :root { --t: 100px; --cw: 114px; --ch: 154px; --gap: 10px; }
-  .hud { padding: 8px 12px 10px; gap: 8px; }
+  .hud { padding: 8px 12px 10px; gap: 6px; }
   .brand { font-size: 1rem; }
-  .stat { min-width: 54px; padding: 3px 7px; }
+  .stats { gap: 5px; }
+  .stat { min-width: 44px; padding: 3px 6px; border-radius: 11px; }
+  .stat__label { font-size: .55rem; letter-spacing: .08em; }
   .stat__value { font-size: 1.05rem; }
+  .stat--time .stat__value { font-size: 1.1rem; }
+  .pips { gap: 4px; } .pip-dot { width: 8px; height: 8px; }
+  .star { width: 14px; height: 14px; }
+  .icon-btn { width: 34px; height: 34px; font-size: 1rem; border-radius: 10px; }
   .target { border-radius: 22px; }
   .target .pips-area { inset: 11px; }
   .toast.t1 { --size: 1.4rem; } .toast.t2 { --size: 1.6rem; } .toast.t3 { --size: 1.85rem; } .toast.t4 { --size: 2.1rem; } .toast.big { --size: 2rem; }
