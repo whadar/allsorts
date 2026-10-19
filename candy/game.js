@@ -93,9 +93,17 @@
     </defs>`;
     document.body.prepend(svg);
   })();
+  // WebKit (every iOS browser, and Safari on Mac) rasterizes SVG lighting filters at low
+  // resolution inside backdrop-filtered tiles and sometimes drops them entirely, so the
+  // bevel light is only used elsewhere. The gradients and gloss carry the look on their own.
+  const UA = navigator.userAgent;
+  const IOS = /iP(hone|ad|od)/.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const SAFARI = /Safari/.test(UA) && !/Chrome|Chromium|CriOS|Edg|OPR|Android/.test(UA);
+  const USE_BEVEL = !(IOS || SAFARI);
+  // Foreground sweets get the bevel light; background ones stay cheap.
   const sweetSVG = (shape, color, cls = 'pip__svg') => {
     const body = SHAPES[shape](color, COLORS[color]);
-    return `<svg class="${cls}" viewBox="0 0 100 100">${cls ? `<g filter="url(#bevel)">${body}</g>` : body}</svg>`;
+    return `<svg class="${cls}" viewBox="0 0 100 100">${cls && USE_BEVEL ? `<g filter="url(#bevel)">${body}</g>` : body}</svg>`;
   };
   function pipsHTML(card) {
     const size = PIP_SIZE[card.count];
