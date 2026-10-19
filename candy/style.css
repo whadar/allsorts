@@ -314,6 +314,9 @@ button { font: inherit; }
 .level__name { font-weight: 700; }
 .level__tag { font-size: .85rem; color: #5b4a7a; }
 .level__meta { font-weight: 700; color: #7c3aed; font-size: .9rem; white-space: nowrap; }
+.about-link { margin: 14px 0 0; font-size: .85rem; color: #7c6a9c; }
+.about-link a { color: #7c3aed; font-weight: 600; text-decoration: none; border-bottom: 2px solid #ddd6fe; }
+.about-link a:hover { border-color: #7c3aed; }
 .btn-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 .btn--ghost { background: #f5f3ff; color: #4c1d95; box-shadow: 0 4px 0 #ddd6fe; }
 .btn--ghost:hover { transform: translateY(-2px); }

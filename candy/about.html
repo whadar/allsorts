@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>About Sweet Sort</title>
+  <meta name="description" content="Why Sweet Sort exists: a playable take on cognitive flexibility, built at the Sheba ARC Healthcare Game Jam.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=6">
+  <style>
+    .about { flex: 1; display: flex; justify-content: center; padding: 28px 16px 48px; }
+    .article {
+      width: min(680px, 100%);
+      background: linear-gradient(170deg, #ffffff, #fdf4ff); color: var(--ink);
+      border-radius: 28px; padding: 32px 32px 28px;
+      box-shadow: 0 30px 80px rgba(0,0,0,.55), inset 0 0 0 2px rgba(255,255,255,.8);
+      animation: panel-in .5s cubic-bezier(.2, 1.3, .4, 1);
+      line-height: 1.55; font-size: 1.05rem;
+    }
+    .article h1 { margin: 6px 0 4px; font-size: 2.4rem; font-weight: 700; line-height: 1.1; filter: drop-shadow(0 4px 0 rgba(59,7,100,.25)); }
+    .article h2 { margin: 30px 0 8px; font-size: 1.25rem; font-weight: 700; color: #4c1d95; }
+    .article p { margin: 0 0 12px; color: #3b2d57; }
+    .article ul { margin: 0 0 12px; padding-left: 22px; color: #3b2d57; }
+    .article li { margin-bottom: 6px; }
+    .article a { color: #7c3aed; font-weight: 600; text-decoration: none; border-bottom: 2px solid #ddd6fe; }
+    .article a:hover { border-color: #7c3aed; }
+    .eyebrow { text-transform: uppercase; letter-spacing: .18em; font-size: .72rem; color: #7c3aed; font-weight: 700; }
+    .lead { font-size: 1.15rem; color: #5b4a7a !important; }
+    .pull { margin: 16px 0; padding: 14px 18px; border-radius: 16px; background: #f5f3ff; border-left: 4px solid #a855f7; color: #3b2d57; font-weight: 500; }
+    .people { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+    .people li { display: flex; flex-direction: column; background: #f5f3ff; border-radius: 14px; padding: 10px 14px; }
+    .people small { color: #7c6a9c; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; font-size: .68rem; }
+    .cta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 28px; }
+    .cta .btn { text-decoration: none; display: inline-block; }
+    @media (max-width: 480px) { .article { padding: 24px 20px 22px; font-size: 1rem; } .article h1 { font-size: 1.9rem; } }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="hud">
+    <div class="brand"><a class="brand__home" href="./" title="Back to the game" style="text-decoration:none">🍬 Sweet Sort</a><span class="level-chip">About</span></div>
+  </header>
+
+  <main class="about">
+    <article class="article">
+      <div class="eyebrow">Built at the Sheba ARC Healthcare Game Jam</div>
+      <h1><span class="title-txt" data-text="About Sweet Sort">About Sweet Sort</span></h1>
+      <p class="lead">A short, replayable game about noticing when the rules have changed, built as a playful cousin of two classic tests of cognitive flexibility.</p>
+
+      <h2>Why cognitive flexibility</h2>
+      <p>C.BIRD's research examines cognitive flexibility, the ability to change strategy, shift attention and adapt when rules or circumstances change, as a possible protective factor against chronic pain. Studies have shown that patients with higher cognitive flexibility are more resilient and cope better with pain.</p>
+
+      <h2>From clinical tests to play</h2>
+      <p>Two established measures inspired the game: the Wisconsin Card Sorting Test and the CANTAB Intra-Extra Dimensional Set Shift. Both ask you to sort by a hidden rule, then quietly change the rule and watch how you adapt. Sweet Sort translates that idea into actual play rather than copying the test.</p>
+
+      <h2>The big idea</h2>
+      <p>Could a short, replayable game train set-shifting and adaptive problem-solving without teaching someone to pass a specific clinical test? The key is that the game never announces a change. A simple mechanic might reward responding to red circles; at some point the rule quietly becomes blue, with no cue that anything has shifted.</p>
+      <div class="pull">What the game trains, and measures, is how fast the player senses that their strategy has stopped working, and then discovers the new rule from feedback alone.</div>
+      <p>A richer version could silently change the relevant feature, action, goal or environmental logic, so that noticing the shift and re-deriving the rule is the core challenge.</p>
+
+      <h2>What we built</h2>
+      <ul>
+        <li><strong>One mechanic.</strong> A card of sweets appears in the middle. A hidden rule, color, shape or number, decides which pile it belongs on. You slide it and get instant feedback: a chime or a buzz.</li>
+        <li><strong>Silent shifts.</strong> After a run of correct sorts the rule changes. The first level celebrates the change so you learn the loop. From level 2 on, nothing on screen gives it away. Sensing that your strategy stopped working is the whole game.</li>
+        <li><strong>Rising pressure.</strong> Later levels change the rule after an unpredictable number of sorts, grow the board from four piles to six with new colors and shapes, and put a shrinking clock on every card.</li>
+        <li><strong>A game, not a test.</strong> A guided tutorial, streak multipliers, combo callouts and a candy world make it something you want to replay, which is what makes repeated practice possible.</li>
+        <li><strong>Measurement built in.</strong> Every run ends with accuracy, best streak, rules cracked and how often the old rule was still being applied, the perseverative errors that clinical tests look for.</li>
+      </ul>
+
+      <h2>What it lets patients do</h2>
+      <ul>
+        <li>Practice set-shifting in sessions of a couple of minutes, on a phone, with nothing to install or set up.</li>
+        <li>Build up difficulty at their own pace. Each level unlocks the next, and best scores are kept on the device.</li>
+        <li>Meet a test-like task as play, which takes away the anxiety and fatigue that make test performance noisy.</li>
+      </ul>
+
+      <h2>Learn more</h2>
+      <p><a href="https://medicalgamejam.pages.dev/problems/cognitive-flexibility-pain-resilience">Cognitive flexibility and pain resilience</a>, the problem brief from the game jam.</p>
+
+      <h2>Team</h2>
+      <ul class="people">
+        <li><small>Developers</small><span><a href="https://www.linkedin.com/in/ariel-laden">Ariel Laden</a> and <a href="https://www.linkedin.com/in/whadar">Hadar Weiss</a></span></li>
+        <li><small>Reviewing scientists</small><span>Dr. Abigail Livny-Ezer and Jenya Lerer, C.BIRD, Clinical Brain Imaging R&amp;D Center</span></li>
+      </ul>
+
+      <div class="cta">
+        <a class="btn btn--primary" href="./">Play Sweet Sort</a>
+      </div>
+    </article>
+  </main>
+</div>
+</body>
+</html>
