@@ -442,7 +442,7 @@
   function renderLevels() {
     const p = progress.p;
     el.levels.innerHTML = LEVELS.map(l => {
-      const locked = l.id > p.unlocked;
+      const locked = false; // every level is open
       const best = p.best[l.id];
       return `<button class="level" data-id="${l.id}" ${locked ? 'disabled' : ''}>
         <span class="level__num">${l.id === 0 ? '✎' : l.id}</span>
@@ -927,7 +927,7 @@
     const p = progress.p;
     const nextId = L.id + 1;
     let unlockedNow = false;
-    if (won && nextId < LEVELS.length && p.unlocked < nextId) { p.unlocked = nextId; unlockedNow = true; }
+    if (won && nextId < LEVELS.length && p.unlocked < nextId) { p.unlocked = nextId; }
     if (!p.best[L.id] || S.score > p.best[L.id]) p.best[L.id] = S.score;
     progress.save();
 
@@ -948,7 +948,7 @@
     el.endResults.innerHTML = rows.map(([v, l], i) =>
       `<div class="result" style="--i:${i}"><div class="result__value">${v}</div><div class="result__label">${l}</div></div>`).join('');
     endStarEls.forEach((s, i) => { s.classList.remove('lit'); s.style.display = i < L.categories ? '' : 'none'; });
-    el.nextBtn.classList.toggle('hidden', !(nextId < LEVELS.length && nextId <= p.unlocked));
+    el.nextBtn.classList.toggle('hidden', !(nextId < LEVELS.length));
     el.nextBtn.textContent = L.id === 0 ? 'Start level 1' : `Next: level ${nextId}`;
     el.endOverlay.classList.remove('hidden');
     (el.nextBtn.classList.contains('hidden') ? el.againBtn : el.nextBtn).focus();

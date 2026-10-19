@@ -11,7 +11,7 @@ rule, and then it silently changes.
   a fast flick also works, and so do the arrow keys. No dealer, just micro-animations, a
   Sweet / Tasty / Delicious / Divine streak ladder, and an announcer voice.
 
-  Levels (each unlocks the next; add `?unlock` to the URL to open them all):
+  Levels (all open from the start):
 
   | Level | Name | Twist |
   |---|---|---|
