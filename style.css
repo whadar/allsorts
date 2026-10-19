@@ -56,8 +56,7 @@ button { font: inherit; }
 .hud {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
   padding: 10px 16px 12px;
-  background: rgba(10, 4, 26, .55);
-  backdrop-filter: blur(12px);
+  background: rgba(10, 4, 26, .78);
   border-bottom: 1px solid rgba(255,255,255,.1);
   position: sticky; top: 0; z-index: 5;
 }
@@ -153,9 +152,8 @@ button { font: inherit; }
   position: relative;
   width: var(--t); height: var(--t);
   border-radius: 26px;
-  background: rgba(255,255,255, calc(.08 + .14 * var(--hot)));
+  background: rgba(255,255,255, calc(.11 + .14 * var(--hot)));
   border: 1.5px solid rgba(255,255,255, calc(.18 + .7 * var(--hot)));
-  backdrop-filter: blur(10px);
   transform: scale(calc(1 + .12 * var(--hot)));
   box-shadow:
     0 12px 30px rgba(0,0,0,.35),
@@ -188,8 +186,6 @@ button { font: inherit; }
 
 /* WebKit renders filtered children of a backdrop-filtered element at low resolution
    (and sometimes not at all), so the tiles lose the frosted glass and SVG shadows there. */
-.webkit .target { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(255,255,255, calc(.12 + .14 * var(--hot))); }
-.webkit .hud { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(10, 4, 26, .82); }
 
 /* ---------- Sweets ---------- */
 .pip { position: absolute; transform: translate(-50%, -50%); }
@@ -299,8 +295,8 @@ button { font: inherit; }
   animation: float-up 1s ease-out forwards;
 }
 
-.hint { color: rgba(255,255,255,.65); font-size: .9rem; margin: 0; text-align: center; }
-.hint__sep { margin: 0 6px; opacity: .5; }
+.hint-text { color: rgba(255,255,255,.65); font-size: .9rem; margin: 0; text-align: center; }
+.hint-text__sep { margin: 0 6px; opacity: .5; }
 
 /* ---------- Overlays ---------- */
 .overlay { position: fixed; inset: 0; z-index: 40; background: rgba(9, 4, 26, .72); backdrop-filter: blur(8px); display: grid; place-items: center; padding: 16px; animation: fade-in .3s ease-out; overflow-y: auto; }
@@ -365,7 +361,7 @@ button { font: inherit; }
 .end-stars .star.lit path { fill: var(--gold); stroke: #b45309; filter: drop-shadow(0 0 6px rgba(253,224,71,.8)); }
 
 /* While a menu is up the board stays out of the way. */
-body.menu .table, body.menu .stats, body.menu .progress { visibility: hidden; }
+body.menu .table, body.menu .stats, body.menu .progress { display: none; }
 
 /* ---------- Splash ---------- */
 .overlay.splash { background: rgba(9, 4, 26, .28); backdrop-filter: none; display: grid; place-items: center; overflow: hidden; }
@@ -486,7 +482,7 @@ body.menu .table, body.menu .stats, body.menu .progress { visibility: hidden; }
   .target { border-radius: 22px; }
   .target .pips-area { inset: 11px; }
   .toast.t1 { --size: 1.4rem; } .toast.t2 { --size: 1.6rem; } .toast.t3 { --size: 1.85rem; } .toast.t4 { --size: 2.1rem; } .toast.big { --size: 2rem; }
-  .hint { display: none; }
+  .hint-text { display: none; }
   .results { grid-template-columns: repeat(2, 1fr); }
   .panel { padding: 22px 18px 18px; }
   .panel__title { font-size: 2.1rem; }
@@ -509,7 +505,7 @@ body.menu .table, body.menu .stats, body.menu .progress { visibility: hidden; }
   .progress { height: 3px; }
   .table { padding: 6px 12px 8px; gap: 8px; }
   .play { gap: 8px; }
-  .hint { display: none; }
+  .hint-text { display: none; }
   .coach { max-width: 520px; padding: 6px 12px; font-size: .9rem; border-radius: 12px; }
   .coach__icon { font-size: 1.1rem; }
   .target { border-radius: 18px; }

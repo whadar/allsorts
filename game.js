@@ -171,7 +171,7 @@
     playBtn: $('play-btn'), playHint: $('play-hint'), levelsOpen: $('levels-open'), levelsBack: $('levels-back'),
     shuffleBtn: $('shuffle-btn'), shuffleChip: $('shuffle-chip'),
     endOverlay: $('end-overlay'), endEyebrow: $('end-eyebrow'), endTitle: $('end-title'), endStars: $('end-stars'),
-    endRank: $('end-rank'), endUnlock: $('end-unlock'), endResults: $('end-results'), hint: document.querySelector('.hint'),
+    endRank: $('end-rank'), endUnlock: $('end-unlock'), endResults: $('end-results'), hint: document.querySelector('.hint-text'),
     nextBtn: $('next-btn'), againBtn: $('again-btn'), levelsBtn: $('levels-btn'), shareBtn: $('share-btn'),
   };
   let targets = {}, cues = {};
@@ -952,6 +952,7 @@
   function startGame(levelId = progress.p.last) {
     L = LEVELS[clamp(levelId, 0, LEVELS.length - 1)] || LEVELS[1];
     progress.p.last = L.id; progress.save();
+    document.body.classList.remove('menu'); // the board must be laid out before it is measured
     sound.ensure(); sound.pop(); voice.load();
     buildBoard(L.piles || 4);
     timer.stop();
@@ -962,7 +963,6 @@
     el.levelChip.textContent = L.id === 0 ? 'Tutorial' : `Level ${L.id} · ${L.name}`;
     el.ruleChip.classList.toggle('on', false);
     el.coach.classList.add('hidden');
-    document.body.classList.remove('menu');
     el.startOverlay.classList.add('hidden');
     el.levelsOverlay.classList.add('hidden');
     el.endOverlay.classList.add('hidden');
