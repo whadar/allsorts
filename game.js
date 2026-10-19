@@ -167,7 +167,9 @@
     progress: $('progress'), mute: $('mute'), timeStat: $('time-stat'), time: $('time'), timer: $('timer'), timerRect: $('timer-rect'), hud: document.querySelector('.hud'), levelChip: $('level-chip'), ruleChip: $('rule-chip'),
     table: $('table'), coach: $('coach'), coachText: $('coach-text'),
     board: $('board'), center: $('center'), wrap: $('card-wrap'), toast: $('toast'), toastTxt: $('toast-txt'),
-    startOverlay: $('start-overlay'), levels: $('levels'),
+    startOverlay: $('start-overlay'), levelsOverlay: $('levels-overlay'), levels: $('levels'), hero: $('hero'),
+    playBtn: $('play-btn'), playHint: $('play-hint'), levelsOpen: $('levels-open'), levelsBack: $('levels-back'),
+    shuffleBtn: $('shuffle-btn'), shuffleChip: $('shuffle-chip'),
     endOverlay: $('end-overlay'), endEyebrow: $('end-eyebrow'), endTitle: $('end-title'), endStars: $('end-stars'),
     endRank: $('end-rank'), endUnlock: $('end-unlock'), endResults: $('end-results'), hint: document.querySelector('.hint'),
     nextBtn: $('next-btn'), againBtn: $('again-btn'), levelsBtn: $('levels-btn'), shareBtn: $('share-btn'),
@@ -192,6 +194,9 @@
     void el.table.offsetWidth;
     el.table.classList.add(big ? 'shake-big' : 'shake');
   }
+
+  // ---------- Settings ----------
+  const settings = { shuffle: localStorage.getItem('sweetsort-shuffle') === 'on' };
 
   // ---------- Progress (unlocks + best scores) ----------
   const progress = (() => {
@@ -265,6 +270,7 @@
     win()   { [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => this.chime(f, 0.5, 0.06, i * 0.11)); },
     star()  { this.chime(1568, 0.3, 0.05); this.noise(0.08, 0.03, 4000); },
     whoosh() { this.noise(0.22, 0.035, 700); this.tone(300, 0.2, 'sine', 0.015, 0, 900); },
+    shuffle() { this.noise(0.12, 0.05, 1400); this.noise(0.1, 0.045, 900, 0.07); this.noise(0.08, 0.04, 1800, 0.14); },
     ready() { this.tone(880, 0.05, 'sine', 0.03); this.tone(1320, 0.06, 'sine', 0.03, 0.04); },
     count() { this.tone(1400 + Math.random() * 300, 0.03, 'square', 0.012); },
     toggle() {
@@ -433,12 +439,71 @@
     el.hint.textContent = `Slide the card toward a pile · or press 1 to ${DIRS.length}`;
   }
   buildBoard(4);
+
+  // Shuffle mode: every turn the piles get a fresh random pairing of color, shape and count,
+  // so no pile is "the one-gem pile" for long, and the key cards swap places.
+  const permutation = n => shuffle([...Array(n).keys()]);
+  function reshuffleKeys(animate = true) {
+    const n = DIRS.length;
+    const pc = permutation(n), ps = permutation(n), pn = permutation(n);
+    KEYS = DIRS.map((dir, i) => ({ dir, color: COLOR_LIST[pc[i]], shape: SHAPE_LIST[ps[i]], count: pn[i] + 1 }));
+    const apply = () => DIRS.forEach((d, i) => {
+      targets[d].querySelector('.pips-area').innerHTML = pipsHTML(KEYS[i]);
+      targets[d].setAttribute('aria-label', `${d} pile: ${describe(KEYS[i])}`);
+    });
+    if (!animate || reduceMotion) { apply(); return; }
+    DIRS.forEach(d => replay(targets[d], 'reshuffle'));
+    sound.shuffle();
+    setTimeout(apply, D(150));
+  }
+  // A card whose color, shape and count each point at a different pile under the current keys.
+  function randomCard(avoid) {
+    const n = KEYS.length;
+    let card;
+    for (let tries = 0; tries < 30; tries++) {
+      const p = permutation(n);
+      card = { color: KEYS[p[0]].color, shape: KEYS[p[1]].shape, count: KEYS[p[2]].count };
+      if (!avoid || !sameCard(card, avoid)) break;
+    }
+    return card;
+  }
+  function renderShuffle() {
+    el.shuffleBtn.setAttribute('aria-pressed', String(settings.shuffle));
+    el.shuffleBtn.textContent = `🔀 Shuffle: ${settings.shuffle ? 'On' : 'Off'}`;
+    el.shuffleChip.textContent = settings.shuffle ? '🔀 Shuffle' : '';
+  }
+  el.shuffleBtn.addEventListener('click', () => {
+    settings.shuffle = !settings.shuffle;
+    localStorage.setItem('sweetsort-shuffle', settings.shuffle ? 'on' : 'off');
+    sound.pop();
+    renderShuffle();
+  });
+  renderShuffle();
   const pipDots = [];
   el.stars.innerHTML = STAR_ICON.repeat(6);
   el.endStars.innerHTML = STAR_ICON.repeat(6);
   const starEls = Array.from(el.stars.querySelectorAll('.star'));
   const endStarEls = Array.from(el.endStars.querySelectorAll('.star'));
 
+  // Big sweets drifting around the splash title.
+  (function buildHero() {
+    const spots = [[14, 20, 120, -14], [84, 16, 96, 12], [8, 62, 88, 18], [90, 60, 130, -10], [26, 88, 72, 6], [72, 90, 84, -22], [50, 6, 64, 0]];
+    el.hero.innerHTML = spots.map(([x, y, s, r], i) =>
+      `<span class="hero-sweet" style="left:${x}%;top:${y}%;width:${s}px;--r:${r}deg;--d:${(3.2 + i * 0.45).toFixed(2)}s;--delay:${(-i * 0.7).toFixed(2)}s">${sweetSVG(SHAPE_LIST[i % SHAPE_LIST.length], COLOR_LIST[(i * 5) % COLOR_LIST.length])}</span>`).join('') +
+      [[22, 40], [78, 34], [40, 78], [66, 14], [12, 86]].map(([x, y], i) => `<i class="hero-spark" style="left:${x}%;top:${y}%;--delay:${(i * 0.5).toFixed(1)}s"></i>`).join('');
+  })();
+  const playTarget = () => (Object.keys(progress.p.best).length ? clamp(progress.p.last, 0, LEVELS.length - 1) : 0);
+  function renderPlayHint() {
+    const l = LEVELS[playTarget()];
+    el.playHint.textContent = l.id === 0 ? 'Start with the tutorial' : `Level ${l.id} · ${l.name}`;
+  }
+  function showSplash() {
+    document.body.classList.add('menu');
+    renderPlayHint();
+    el.endOverlay.classList.add('hidden');
+    el.levelsOverlay.classList.add('hidden');
+    el.startOverlay.classList.remove('hidden');
+  }
   function renderLevels() {
     const p = progress.p;
     el.levels.innerHTML = LEVELS.map(l => {
@@ -674,7 +739,8 @@
   function deal() {
     if (S.over) return;
     if (S.trials >= L.trials || S.categories >= L.categories) return endGame();
-    S.card = nextCard();
+    if (settings.shuffle) { reshuffleKeys(S.trials > 0); S.card = randomCard(S.card); }
+    else S.card = nextCard();
     const node = document.createElement('div');
     node.className = 'card enter';
     node.setAttribute('role', 'img');
@@ -894,7 +960,9 @@
     el.levelChip.textContent = L.id === 0 ? 'Tutorial' : `Level ${L.id} · ${L.name}`;
     el.ruleChip.classList.toggle('on', false);
     el.coach.classList.add('hidden');
+    document.body.classList.remove('menu');
     el.startOverlay.classList.add('hidden');
+    el.levelsOverlay.classList.add('hidden');
     el.endOverlay.classList.add('hidden');
     el.center.classList.remove('touched');
     clearGuide();
@@ -905,9 +973,11 @@
     setTimeout(deal, D(700));
   }
   function showLevels() {
+    document.body.classList.add('menu');
     renderLevels();
     el.endOverlay.classList.add('hidden');
-    el.startOverlay.classList.remove('hidden');
+    el.startOverlay.classList.add('hidden');
+    el.levelsOverlay.classList.remove('hidden');
   }
   function rankFor() {
     const acc = S.trials ? S.correct / S.trials : 0;
@@ -1000,14 +1070,19 @@
     catch (e) { flash('Copy failed'); }
   }
   el.shareBtn.addEventListener('click', shareResult);
-  $('home-btn').addEventListener('click', () => { sound.pop(); clearTimeout(idleTimer); timer.stop(); S.over = true; showLevels(); });
+  $('home-btn').addEventListener('click', () => { sound.pop(); clearTimeout(idleTimer); timer.stop(); S.over = true; showSplash(); });
+  el.playBtn.addEventListener('click', () => startGame(playTarget()));
+  el.levelsOpen.addEventListener('click', () => { sound.pop(); showLevels(); });
+  el.levelsBack.addEventListener('click', () => { sound.pop(); showSplash(); });
 
   const KEY_DIR = { ArrowUp: 'up', ArrowLeft: 'left', ArrowRight: 'right', ArrowDown: 'down', w: 'up', a: 'left', d: 'right', s: 'down' };
   document.addEventListener('keydown', e => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     const startUp = !el.startOverlay.classList.contains('hidden');
+    const levelsUp = !el.levelsOverlay.classList.contains('hidden');
     const endUp = !el.endOverlay.classList.contains('hidden');
-    if (startUp) { if (e.key === 'Enter') { e.preventDefault(); startGame(progress.p.last); } return; }
+    if (startUp) { if (e.key === 'Enter') { e.preventDefault(); startGame(playTarget()); } return; }
+    if (levelsUp) { if (e.key === 'Escape') showSplash(); if (e.key === 'Enter') { e.preventDefault(); startGame(progress.p.last); } return; }
     if (endUp) { if (e.key === 'Enter') { e.preventDefault(); (el.nextBtn.classList.contains('hidden') ? el.againBtn : el.nextBtn).click(); } return; }
     let dir = KEY_DIR[e.key] || KEY_DIR[e.key.toLowerCase()];
     const num = Number(e.key);
@@ -1017,6 +1092,8 @@
   });
 
   renderLevels();
+  renderPlayHint();
+  document.body.classList.add('menu');
   reset();
   if (location.search.includes('debug')) window.sweetSort = { state: S, level: () => L, LEVELS, timer, shareText, deal, commit, endGame, crackRule, toast, shake, voice, armIdle, startGame, progress };
 })();

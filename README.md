@@ -22,6 +22,10 @@ rule, and then it silently changes.
   | 4 | Sweet Six | Six piles instead of four: six colors, six shapes, counts up to six. |
   | 5 | Rush Hour | Six piles plus a countdown per card that shrinks every turn. Running out counts as a miss. |
 
+  A **Shuffle** toggle on the splash screen re-deals the piles every turn: the key cards swap
+  places and their color, shape and count are re-paired at random, so no pile stays "the
+  one-gem pile". It applies to every level.
+
   The announcer clips in `voice/` were rendered with macOS `say` (Daniel voice); the
   browser's speech synthesis is used only if a clip fails to load.
 
