@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=11">
+  <link rel="stylesheet" href="style.css?v=12">
 </head>
 <body>
 <div class="app">
@@ -31,7 +31,7 @@
         <span class="stars" id="stars" aria-label="Rules cracked"></span>
       </div>
       <div class="stat"><span class="stat__label">Cards</span><span id="cards-left" class="stat__value">32</span></div>
-      <div class="stat stat--time hidden" id="time-stat"><span class="stat__label">Time</span><span id="time" class="stat__value">0.0</span></div>
+      <div class="stat stat--time hidden" id="time-stat" aria-label="Seconds left"><span id="time" class="stat__value">0.0</span></div>
     </div>
     <button id="mute" class="icon-btn" aria-label="Toggle sound" title="Toggle sound (M)">🔊</button>
     <div class="progress" aria-hidden="true"><div class="progress__fill" id="progress"></div></div>
@@ -80,6 +80,6 @@
 
   <canvas id="fx" aria-hidden="true"></canvas>
 </div>
-<script src="game.js?v=11"></script>
+<script src="game.js?v=12"></script>
 </body>
 </html>

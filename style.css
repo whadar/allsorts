@@ -202,7 +202,8 @@ button { font: inherit; }
 .timer.warn .timer__fill { stroke: var(--gold); }
 .timer.urgent .timer__fill { stroke: var(--bad); animation: urgent-pulse .45s ease-in-out infinite; }
 .stat--time.hidden { display: none; }
-.stat--time .stat__value { min-width: 2.2em; }
+.stat--time { min-width: 0; padding: 4px 8px; }
+.stat--time .stat__value { min-width: 2.2em; font-size: 1.3rem; }
 .stat--time .stat__value.low { color: var(--bad); animation: urgent-pulse .45s ease-in-out infinite; }
 
 /* ---------- Center stack + card ---------- */
