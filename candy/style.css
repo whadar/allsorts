@@ -197,12 +197,12 @@ button { font: inherit; }
 /* WebKit renders filtered children of a backdrop-filtered element at low resolution
    (and sometimes not at all), so the tiles lose the frosted glass and SVG shadows there. */
 .webkit .target { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(255,255,255, calc(.12 + .14 * var(--hot))); }
-.webkit .target .pip__svg { filter: none; }
 .webkit .hud { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(10, 4, 26, .82); }
 
 /* ---------- Sweets ---------- */
 .pip { position: absolute; transform: translate(-50%, -50%); }
-.pip__svg { display: block; width: 100%; height: auto; overflow: visible; filter: drop-shadow(0 5px 6px rgba(0,0,0,.32)); }
+/* Sweets stay pure vectors: no CSS or SVG filters, so nothing is rasterized and they are crisp at any pixel density. */
+.pip__svg { display: block; width: 100%; height: auto; overflow: visible; }
 .card .pip__svg { animation: jiggle 2.8s ease-in-out infinite; animation-delay: calc(var(--i) * -.7s); }
 
 /* ---------- Center stack + card ---------- */
@@ -434,6 +434,7 @@ button { font: inherit; }
   .target { border-radius: 22px; }
   .target .pips-area { inset: 11px; }
   .toast.t1 { --size: 1.4rem; } .toast.t2 { --size: 1.6rem; } .toast.t3 { --size: 1.85rem; } .toast.t4 { --size: 2.1rem; } .toast.big { --size: 2rem; }
+  .hint { display: none; }
   .results { grid-template-columns: repeat(2, 1fr); }
   .panel { padding: 22px 18px 18px; }
   .panel__title { font-size: 2.1rem; }

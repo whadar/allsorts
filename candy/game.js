@@ -38,6 +38,7 @@
   const GEM = '50,5 88,38 50,96 12,38';
   const SHAPES = {
     orb: (c, k) => `
+      <ellipse cx="52" cy="95" rx="34" ry="6" fill="#000" opacity=".2"/>
       <circle cx="50" cy="52" r="40" fill="url(#g-${c})"/>
       <circle cx="50" cy="52" r="40" fill="url(#shade)"/>
       <circle cx="50" cy="52" r="40" fill="none" stroke="${k.dark}" stroke-opacity=".7" stroke-width="3"/>
@@ -45,6 +46,7 @@
       <circle cx="29" cy="49" r="3.5" fill="#fff" opacity=".85"/>
       <path d="M24 70 Q50 95 76 70" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="3" stroke-linecap="round"/>`,
     gem: (c, k) => `
+      <ellipse cx="52" cy="97" rx="26" ry="5" fill="#000" opacity=".2"/>
       <polygon points="${GEM}" fill="url(#g-${c})"/>
       <polygon points="50,5 88,38 12,38" fill="#fff" opacity=".2"/>
       <polygon points="50,5 32,38 68,38" fill="#fff" opacity=".42"/>
@@ -56,6 +58,7 @@
       <line x1="12" y1="38" x2="88" y2="38" stroke="#fff" stroke-opacity=".5" stroke-width="1.5"/>
       <polygon points="${GEM}" fill="none" stroke="${k.dark}" stroke-opacity=".75" stroke-width="3" stroke-linejoin="round"/>`,
     star: (c, k) => `
+      <ellipse cx="52" cy="91" rx="32" ry="6" fill="#000" opacity=".2"/>
       <polygon points="${STAR}" fill="url(#g-${c})" stroke-linejoin="round"/>
       <polygon points="${STAR}" fill="url(#shade)"/>
       <polygon points="${STAR}" fill="none" stroke="${k.dark}" stroke-opacity=".75" stroke-width="3" stroke-linejoin="round"/>
@@ -63,6 +66,7 @@
       <ellipse cx="40" cy="46" rx="9" ry="5" fill="url(#gloss)" transform="rotate(-30 40 46)"/>
       <circle cx="33" cy="41" r="2.5" fill="#fff" opacity=".9"/>`,
     heart: (c, k) => `
+      <ellipse cx="52" cy="93" rx="30" ry="6" fill="#000" opacity=".2"/>
       <path d="${HEART}" fill="url(#g-${c})"/>
       <path d="${HEART}" fill="url(#shade)"/>
       <path d="${HEART}" fill="none" stroke="${k.dark}" stroke-opacity=".75" stroke-width="3" stroke-linejoin="round"/>
@@ -99,12 +103,12 @@
   const UA = navigator.userAgent;
   const IOS = /iP(hone|ad|od)/.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const SAFARI = /Safari/.test(UA) && !/Chrome|Chromium|CriOS|Edg|OPR|Android/.test(UA);
-  const USE_BEVEL = !(IOS || SAFARI);
+  const USE_BEVEL = false; // the lighting filter rasterized the vectors and looked soft, see style.css
   if (IOS || SAFARI) document.documentElement.classList.add("webkit");
   // Foreground sweets get the bevel light; background ones stay cheap.
   const sweetSVG = (shape, color, cls = 'pip__svg') => {
     const body = SHAPES[shape](color, COLORS[color]);
-    return `<svg class="${cls}" viewBox="0 0 100 100">${cls && USE_BEVEL ? `<g filter="url(#bevel)">${body}</g>` : body}</svg>`;
+    return `<svg class="${cls}" viewBox="0 0 100 100" shape-rendering="geometricPrecision">${cls && USE_BEVEL ? `<g filter="url(#bevel)">${body}</g>` : body}</svg>`;
   };
   function pipsHTML(card) {
     const size = PIP_SIZE[card.count];
