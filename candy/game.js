@@ -100,6 +100,7 @@
   const IOS = /iP(hone|ad|od)/.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const SAFARI = /Safari/.test(UA) && !/Chrome|Chromium|CriOS|Edg|OPR|Android/.test(UA);
   const USE_BEVEL = !(IOS || SAFARI);
+  if (IOS || SAFARI) document.documentElement.classList.add("webkit");
   // Foreground sweets get the bevel light; background ones stay cheap.
   const sweetSVG = (shape, color, cls = 'pip__svg') => {
     const body = SHAPES[shape](color, COLORS[color]);
