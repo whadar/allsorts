@@ -4,9 +4,9 @@ Two playful takes on the Wisconsin Card Sorting Test. In both, a hidden rule (co
 or number) decides which of four piles a card belongs on. Six correct sorts in a row crack the
 rule, and then it silently changes.
 
-- **Card Sorter** (`index.html`): a card-table version with a dealer who deals, reacts and
+- **Card Sorter** (`dealer/index.html`, served at `/dealer/`): a card-table version with a dealer who deals, reacts and
   celebrates. Click a pile or press 1 to 4.
-- **Sweet Sort** (`candy/index.html`): a candy-flavored version with glossy gems, stars, hearts
+- **Sweet Sort** (`index.html`, served at `/`; `/candy/` redirects there): a candy-flavored version with glossy gems, stars, hearts
   and orbs. Drag the card from the middle toward a pile (up, down, left, right) and let go;
   a fast flick also works, and so do the arrow keys. No dealer, just micro-animations, a
   Sweet / Tasty / Delicious / Divine streak ladder, and an announcer voice.
@@ -22,10 +22,10 @@ rule, and then it silently changes.
   | 4 | Sweet Six | Six piles instead of four: six colors, six shapes, counts up to six. |
   | 5 | Rush Hour | Six piles plus a countdown per card that shrinks every turn. Running out counts as a miss. |
 
-  The announcer clips in `candy/voice/` were rendered with macOS `say` (Daniel voice); the
+  The announcer clips in `voice/` were rendered with macOS `say` (Daniel voice); the
   browser's speech synthesis is used only if a clip fails to load.
 
-No build step. Open `index.html` in a browser, or serve the folder:
+No build step. Open `index.html` (Sweet Sort) or `dealer/index.html` (Card Sorter) in a browser, or serve the folder:
 
 ```bash
 node .claude/serve.js 8765

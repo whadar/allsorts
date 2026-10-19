@@ -2,83 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="refresh" content="0; url=../">
   <title>Sweet Sort</title>
-  <meta name="description" content="A candy-flavored take on the Wisconsin Card Sorting Test. Slide the sweets to the right pile.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=10">
+  <script>location.replace('../' + location.search + location.hash);</script>
 </head>
-<body>
-<div class="app">
-  <div class="bg-candies" id="bg-candies" aria-hidden="true"></div>
-
-  <header class="hud">
-    <div class="brand"><button class="brand__home" id="home-btn" title="Back to levels">🍬 Sweet Sort</button><span class="level-chip" id="level-chip"></span><span class="rule-chip" id="rule-chip"></span></div>
-    <div class="stats">
-      <div class="stat stat--score">
-        <span class="stat__label">Score</span>
-        <span class="stat__row"><span id="score" class="stat__value">0</span><span id="multi" class="multi" aria-live="polite"></span></span>
-      </div>
-      <div class="stat">
-        <span class="stat__label">Combo</span>
-        <span class="pips" id="pips" aria-label="Combo progress"></span>
-        <span class="stat__value streak-num" id="streak-num">0</span>
-      </div>
-      <div class="stat">
-        <span class="stat__label">Rules</span>
-        <span class="stars" id="stars" aria-label="Rules cracked"></span>
-      </div>
-      <div class="stat"><span class="stat__label">Cards</span><span id="cards-left" class="stat__value">32</span></div>
-      <div class="stat stat--time hidden" id="time-stat"><span class="stat__label">Time</span><span id="time" class="stat__value">0.0</span></div>
-    </div>
-    <button id="mute" class="icon-btn" aria-label="Toggle sound" title="Toggle sound (M)">🔊</button>
-    <div class="progress" aria-hidden="true"><div class="progress__fill" id="progress"></div></div>
-  </header>
-
-  <main class="table" id="table">
-    <div class="coach hidden" id="coach" role="status" aria-live="polite"><span class="coach__icon">🍭</span><span id="coach-text"></span></div>
-    <div class="board" id="board">
-      <div class="center" id="center">
-        <div class="toast" id="toast"><span class="toast__txt" id="toast-txt" data-text=""></span></div>
-        <svg class="timer hidden" id="timer" aria-hidden="true"><rect class="timer__track" pathLength="100"/><rect class="timer__fill" id="timer-rect" pathLength="100"/></svg>
-        <div class="card-wrap" id="card-wrap">
-          <div class="stack-card"></div>
-          <div class="stack-card"></div>
-        </div>
-      </div>
-    </div>
-    <p class="hint">Slide the card toward a pile · or press 1 to 4</p>
-  </main>
-
-  <div class="overlay" id="start-overlay">
-    <div class="panel">
-      <h1 class="panel__title"><span class="title-txt" data-text="Sweet Sort">Sweet Sort</span></h1>
-      <p class="panel__lead">Four piles, one secret rule. Slide each card to where it belongs.<br>Pick a level:</p>
-      <div class="levels" id="levels"></div>
-      <p class="about-link"><a href="about.html">About this game</a> · built at the Sheba ARC Healthcare Game Jam</p>
-    </div>
-  </div>
-
-  <div class="overlay hidden" id="end-overlay">
-    <div class="panel">
-      <div class="panel__eyebrow" id="end-eyebrow">Game over</div>
-      <h2 class="panel__title"><span class="title-txt" id="end-title" data-text="All sorted">All sorted</span></h2>
-      <div class="end-stars" id="end-stars" aria-label="Stars earned"></div>
-      <div class="rank" id="end-rank"></div>
-      <div class="unlock hidden" id="end-unlock"></div>
-      <div class="results" id="end-results"></div>
-      <div class="btn-row">
-        <button class="btn btn--primary" id="next-btn">Next level</button>
-        <button class="btn btn--ghost" id="again-btn">Play again</button>
-        <button class="btn btn--ghost" id="levels-btn">Levels</button>
-      </div>
-    </div>
-  </div>
-
-  <canvas id="fx" aria-hidden="true"></canvas>
-</div>
-<script src="game.js?v=10"></script>
-</body>
+<body><p>Sweet Sort moved to <a href="../">the home page</a>.</p></body>
 </html>

@@ -2,148 +2,83 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Card Sorter</title>
-  <meta name="description" content="A modern, playful take on the Wisconsin Card Sorting Test.">
-  <link rel="stylesheet" href="style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Sweet Sort</title>
+  <meta name="description" content="A candy-flavored take on the Wisconsin Card Sorting Test. Slide the sweets to the right pile.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
 <div class="app">
+  <div class="bg-candies" id="bg-candies" aria-hidden="true"></div>
+
   <header class="hud">
-    <button class="brand" id="home-btn" title="Back to start"><span class="brand__icon">🃏</span> Card Sorter</button>
-    <div class="stats" aria-live="polite">
-      <div class="stat"><span class="stat__label">Score</span><span id="score" class="stat__value">0</span></div>
-      <div class="stat"><span class="stat__label">Streak</span><span id="streak" class="stat__value">0</span></div>
-      <div class="stat"><span class="stat__label">Rules</span><span id="cats" class="stat__value">0/6</span></div>
-      <div class="stat"><span class="stat__label">Cards</span><span id="cards-left" class="stat__value">64</span></div>
+    <div class="brand"><button class="brand__home" id="home-btn" title="Back to levels">🍬 Sweet Sort</button><span class="level-chip" id="level-chip"></span><span class="rule-chip" id="rule-chip"></span></div>
+    <div class="stats">
+      <div class="stat stat--score">
+        <span class="stat__label">Score</span>
+        <span class="stat__row"><span id="score" class="stat__value">0</span><span id="multi" class="multi" aria-live="polite"></span></span>
+      </div>
+      <div class="stat">
+        <span class="stat__label">Combo</span>
+        <span class="pips" id="pips" aria-label="Combo progress"></span>
+        <span class="stat__value streak-num" id="streak-num">0</span>
+      </div>
+      <div class="stat">
+        <span class="stat__label">Rules</span>
+        <span class="stars" id="stars" aria-label="Rules cracked"></span>
+      </div>
+      <div class="stat"><span class="stat__label">Cards</span><span id="cards-left" class="stat__value">32</span></div>
+      <div class="stat stat--time hidden" id="time-stat"><span class="stat__label">Time</span><span id="time" class="stat__value">0.0</span></div>
     </div>
-    <button id="mute" class="icon-btn" aria-label="Toggle sound" title="Toggle sound">🔊</button>
+    <button id="mute" class="icon-btn" aria-label="Toggle sound" title="Toggle sound (M)">🔊</button>
+    <div class="progress" aria-hidden="true"><div class="progress__fill" id="progress"></div></div>
   </header>
 
-  <main class="table">
-    <section class="dealer-zone">
-      <div class="deck" id="deck" aria-hidden="true">
-        <div class="deck__card"></div>
-        <div class="deck__card"></div>
-        <div class="deck__card"></div>
-        <div class="deck__card deck__card--top"></div>
+  <main class="table" id="table">
+    <div class="coach hidden" id="coach" role="status" aria-live="polite"><span class="coach__icon">🍭</span><span id="coach-text"></span></div>
+    <div class="board" id="board">
+      <div class="center" id="center">
+        <div class="toast" id="toast"><span class="toast__txt" id="toast-txt" data-text=""></span></div>
+        <svg class="timer hidden" id="timer" aria-hidden="true"><rect class="timer__track" pathLength="100"/><rect class="timer__fill" id="timer-rect" pathLength="100"/></svg>
+        <div class="card-wrap" id="card-wrap">
+          <div class="stack-card"></div>
+          <div class="stack-card"></div>
+        </div>
       </div>
-
-      <div class="dealer-wrap">
-        <svg class="dealer" id="dealer" data-mood="neutral" viewBox="0 0 200 230" aria-hidden="true">
-          <!-- shoulders / jacket -->
-          <path d="M28 230 C28 178 62 160 100 160 C138 160 172 178 172 230 Z" fill="#1f2937"/>
-          <!-- shirt -->
-          <path d="M84 162 L100 222 L116 162 Z" fill="#f8fafc"/>
-          <!-- bow tie -->
-          <path d="M84 170 L100 178 L116 170 L116 188 L100 180 L84 188 Z" fill="#e63946"/>
-          <circle cx="100" cy="179" r="3.5" fill="#b91c1c"/>
-          <!-- neck -->
-          <rect x="88" y="138" width="24" height="30" rx="9" fill="#e8b98a"/>
-          <!-- ears -->
-          <circle cx="50" cy="104" r="8" fill="#f1c27d"/>
-          <circle cx="150" cy="104" r="8" fill="#f1c27d"/>
-          <!-- head -->
-          <circle cx="100" cy="100" r="52" fill="#f1c27d"/>
-          <!-- cheeks -->
-          <g class="cheeks">
-            <circle cx="70" cy="118" r="8" fill="#f472b6" opacity=".45"/>
-            <circle cx="130" cy="118" r="8" fill="#f472b6" opacity=".45"/>
-          </g>
-          <!-- visor -->
-          <path d="M48 76 Q100 34 152 76 L152 88 Q100 52 48 88 Z" fill="#14532d"/>
-          <path d="M38 88 Q100 60 162 88 L170 98 Q100 76 30 98 Z" fill="#22c55e"/>
-          <path d="M38 88 Q100 60 162 88" fill="none" stroke="#166534" stroke-width="3"/>
-          <!-- brows -->
-          <g class="brows" stroke="#7c3f14" stroke-width="4" stroke-linecap="round" fill="none">
-            <path class="brow brow--neutral" d="M70 84 Q82 80 92 84"/>
-            <path class="brow brow--neutral" d="M108 84 Q118 80 130 84"/>
-            <path class="brow brow--sad" d="M70 80 L92 88"/>
-            <path class="brow brow--sad" d="M130 80 L108 88"/>
-            <path class="brow brow--wow" d="M70 74 Q82 68 92 74"/>
-            <path class="brow brow--wow" d="M108 74 Q118 68 130 74"/>
-          </g>
-          <!-- eyes -->
-          <g class="eyes">
-            <g class="eye eye--open">
-              <circle cx="82" cy="100" r="6.5" fill="#1f2937"/>
-              <circle cx="118" cy="100" r="6.5" fill="#1f2937"/>
-              <circle cx="84" cy="98" r="2" fill="#fff"/>
-              <circle cx="120" cy="98" r="2" fill="#fff"/>
-            </g>
-            <g class="eye eye--happy" fill="none" stroke="#1f2937" stroke-width="4" stroke-linecap="round">
-              <path d="M74 102 Q82 92 90 102"/>
-              <path d="M110 102 Q118 92 126 102"/>
-            </g>
-            <g class="eye eye--wow">
-              <circle cx="82" cy="100" r="9" fill="#fff"/>
-              <circle cx="118" cy="100" r="9" fill="#fff"/>
-              <circle cx="82" cy="100" r="5" fill="#1f2937"/>
-              <circle cx="118" cy="100" r="5" fill="#1f2937"/>
-            </g>
-            <g class="eye eye--wink">
-              <circle cx="82" cy="100" r="6.5" fill="#1f2937"/>
-              <circle cx="84" cy="98" r="2" fill="#fff"/>
-              <path d="M110 100 Q118 94 126 100" fill="none" stroke="#1f2937" stroke-width="4" stroke-linecap="round"/>
-            </g>
-          </g>
-          <!-- nose -->
-          <path d="M97 108 Q100 116 104 110" fill="none" stroke="#c98a4b" stroke-width="3" stroke-linecap="round"/>
-          <!-- mouths -->
-          <g class="mouths">
-            <path class="mouth mouth--neutral" d="M88 128 Q100 134 112 128" fill="none" stroke="#7c2d12" stroke-width="4" stroke-linecap="round"/>
-            <path class="mouth mouth--happy" d="M80 124 Q100 150 120 124 Z" fill="#7c2d12"/>
-            <path class="mouth mouth--happy" d="M86 126 Q100 134 114 126 Z" fill="#fff"/>
-            <path class="mouth mouth--sad" d="M86 136 Q100 122 114 136" fill="none" stroke="#7c2d12" stroke-width="4" stroke-linecap="round"/>
-            <ellipse class="mouth mouth--wow" cx="100" cy="132" rx="8" ry="11" fill="#7c2d12"/>
-            <path class="mouth mouth--smirk" d="M86 130 Q104 138 116 124" fill="none" stroke="#7c2d12" stroke-width="4" stroke-linecap="round"/>
-          </g>
-        </svg>
-      </div>
-
-      <div class="bubble" id="bubble" role="status" aria-live="polite">
-        <span id="bubble-text">Pull up a chair.</span>
-      </div>
-    </section>
-
-    <section class="stage" id="stage">
-      <div class="slot" id="slot"></div>
-    </section>
-
-    <section class="piles" id="piles" aria-label="Sorting piles"></section>
-
-    <p class="hint">Click a pile or press <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd></p>
+    </div>
+    <p class="hint">Slide the card toward a pile · or press 1 to 4</p>
   </main>
 
   <div class="overlay" id="start-overlay">
     <div class="panel">
-      <h1 class="panel__title">Card Sorter</h1>
-      <p class="panel__lead">The dealer deals a card. You put it on one of four piles.<br>There's a secret rule for what goes where, and it changes without warning.</p>
-      <ul class="howto">
-        <li><span class="howto__icon">🎴</span> <span>Match by <strong>color</strong>, <strong>shape</strong>, or <strong>number</strong>. Only one rule counts at a time.</span></li>
-        <li><span class="howto__icon">🕵️</span> <span>Use the dealer's feedback to figure out the rule.</span></li>
-        <li><span class="howto__icon">🔄</span> <span>Get a run of correct sorts and the rule quietly changes. Stay flexible.</span></li>
-      </ul>
-      <label class="toggle">
-        <input type="checkbox" id="classic-mode">
-        <span>Classic mode: no celebration when you crack a rule</span>
-      </label>
-      <button class="btn btn--primary" id="start-btn">Deal me in</button>
+      <h1 class="panel__title"><span class="title-txt" data-text="Sweet Sort">Sweet Sort</span></h1>
+      <p class="panel__lead">Four piles, one secret rule. Slide each card to where it belongs.<br>Pick a level:</p>
+      <div class="levels" id="levels"></div>
+      <p class="about-link"><a href="about.html">About this game</a> · built at the Sheba ARC Healthcare Game Jam</p>
     </div>
   </div>
 
   <div class="overlay hidden" id="end-overlay">
     <div class="panel">
       <div class="panel__eyebrow" id="end-eyebrow">Game over</div>
-      <h2 class="panel__title" id="end-title">Deck's out!</h2>
-      <div class="rank" id="end-rank">Card Shark</div>
+      <h2 class="panel__title"><span class="title-txt" id="end-title" data-text="All sorted">All sorted</span></h2>
+      <div class="end-stars" id="end-stars" aria-label="Stars earned"></div>
+      <div class="rank" id="end-rank"></div>
+      <div class="unlock hidden" id="end-unlock"></div>
       <div class="results" id="end-results"></div>
-      <button class="btn btn--primary" id="again-btn">Play again</button>
+      <div class="btn-row">
+        <button class="btn btn--primary" id="next-btn">Next level</button>
+        <button class="btn btn--ghost" id="again-btn">Play again</button>
+        <button class="btn btn--ghost" id="levels-btn">Levels</button>
+      </div>
     </div>
   </div>
 
-  <canvas id="confetti" aria-hidden="true"></canvas>
+  <canvas id="fx" aria-hidden="true"></canvas>
 </div>
-<script src="game.js"></script>
+<script src="game.js?v=10"></script>
 </body>
 </html>

@@ -1,155 +1,360 @@
 (() => {
   'use strict';
 
-  // ---------- Tunables ----------
-  const CRITERION = 6;        // consecutive correct sorts to crack a rule
-  const MAX_CATEGORIES = 6;   // rules to crack before the game ends
-  const MAX_TRIALS = 64;      // cards in the deck
-  const BASE_POINTS = 10;
-  const STREAK_STEP = 2;      // extra points per streak step
-  const STREAK_CAP = 5;       // streak bonus caps at this many steps
-  const CATEGORY_BONUS = 50;
-
-  const COLORS = { red: '#e63946', green: '#2a9d8f', yellow: '#f4c430', blue: '#3a86ff' };
-  const KEYS = [
-    { color: 'red',    shape: 'triangle', count: 1 },
-    { color: 'green',  shape: 'star',     count: 2 },
-    { color: 'yellow', shape: 'cross',    count: 3 },
-    { color: 'blue',   shape: 'circle',   count: 4 },
+  // ---------- Levels ----------
+  // criterion: consecutive correct sorts that crack a rule (a [min, max] picks a fresh random number per rule).
+  // announce: celebrate a cracked rule (false = silent switch, like the original test).
+  // pips: show progress toward cracking in the HUD. guided: tutorial coaching. penalty: points lost per mistake.
+  const LEVELS = [
+    { id: 0, name: 'Tutorial',       tagline: 'Guided and easy. Skip it if you like.',  criterion: 2,      categories: 2, trials: 12, announce: true,  pips: true,  guided: true,  penalty: 0 },
+    { id: 1, name: 'Sweet Start',    tagline: 'Crack three rules. Fanfare included.',   criterion: 4,      categories: 3, trials: 32, announce: true,  pips: true,  guided: false, penalty: 0 },
+    { id: 2, name: 'Silent Switch',  tagline: 'Rules change without warning.',          criterion: 4,      categories: 3, trials: 32, announce: false, pips: false, guided: false, penalty: 0 },
+    { id: 3, name: 'Shifting Sands', tagline: 'Rules change after 2 to 5 sorts.',       criterion: [2, 5], categories: 4, trials: 32, announce: false, pips: false, guided: false, penalty: 0 },
+    { id: 4, name: 'Sweet Six',      tagline: 'Six piles, six colors, six shapes.',     criterion: [2, 5], categories: 4, trials: 32, announce: false, pips: false, guided: false, penalty: 0, piles: 6 },
+    // timer: seconds per card at the start, the floor, and how much is shaved off every card.
+    { id: 5, name: 'Rush Hour',      tagline: 'Beat the clock. It keeps shrinking.',    criterion: [2, 5], categories: 4, trials: 32, announce: false, pips: false, guided: false, penalty: 0, piles: 6, timer: { start: 6, min: 2.2, step: 0.15 } },
   ];
+  const BASE_POINTS = 10;
+  const MULT_CAP = 5;
+  const CATEGORY_BONUS = 50;
+  const SWIPE_COMMIT = 86;
+  const FLICK_SPEED = 0.9;
+  const DEAD_ZONE = 14;
+
+  // ---------- Sweets ----------
+  const COLORS = {
+    cherry: { light: '#ffb3c1', base: '#ff3b5c', dark: '#8f0a2e' },
+    lime:   { light: '#c6ffdd', base: '#3ddc84', dark: '#0b6b3c' },
+    lemon:  { light: '#fff6b8', base: '#ffd23f', dark: '#b06f00' },
+    berry:  { light: '#c2dcff', base: '#3a8dff', dark: '#122f8f' },
+    orange: { light: '#ffd9b0', base: '#ff8a3d', dark: '#9a3d00' },
+    grape:  { light: '#e9cbff', base: '#b14cff', dark: '#5a1596' },
+  };
+  const COLOR_LIST = ['cherry', 'lime', 'lemon', 'berry', 'orange', 'grape'];
+  const SHAPE_LIST = ['gem', 'star', 'heart', 'orb', 'ring', 'tri'];
+  // Pile layouts on the 3x3 board grid: four on the sides, or six on the corners and sides.
+  const LAYOUTS = {
+    4: [{ dir: 'up', area: '1 / 2', vec: [0, -1] }, { dir: 'left', area: '2 / 1', vec: [-1, 0] }, { dir: 'right', area: '2 / 3', vec: [1, 0] }, { dir: 'down', area: '3 / 2', vec: [0, 1] }],
+    6: [{ dir: 'up-left', area: '1 / 1', vec: [-1, -1] }, { dir: 'up-right', area: '1 / 3', vec: [1, -1] }, { dir: 'left', area: '2 / 1', vec: [-1, 0] },
+        { dir: 'right', area: '2 / 3', vec: [1, 0] }, { dir: 'down-left', area: '3 / 1', vec: [-1, 1] }, { dir: 'down-right', area: '3 / 3', vec: [1, 1] }],
+  };
+  let LAYOUT = LAYOUTS[4];
+  let DIRS = LAYOUT.map(l => l.dir);
+  let KEYS = DIRS.map((dir, i) => ({ dir, color: COLOR_LIST[i], shape: SHAPE_LIST[i], count: i + 1 }));
+  const unitVec = dir => { const [x, y] = LAYOUT.find(l => l.dir === dir).vec; const n = Math.hypot(x, y); return [x / n, y / n]; };
   const RULES = ['color', 'shape', 'count'];
-  const RULE_WORD = { color: 'color', shape: 'shape', count: 'number' };
+  const RULE_WORD = { color: 'COLOR', shape: 'SHAPE', count: 'NUMBER' };
 
-  const PIP_LAYOUT = {
-    1: [[50, 50]],
-    2: [[50, 30], [50, 70]],
-    3: [[30, 25], [50, 50], [70, 75]],
-    4: [[32, 30], [68, 30], [32, 70], [68, 70]],
-  };
-  const PIP_SIZE = { 1: 58, 2: 40, 3: 36, 4: 38 };
   const STAR = '50,4 61.2,34.6 93.8,35.8 68.1,55.9 77,87.2 50,69 23,87.2 31.9,55.9 6.2,35.8 38.8,34.6';
-  const SHAPE_SVG = {
-    triangle: c => `<polygon points="50,8 92,88 8,88" fill="${c}" stroke="${c}" stroke-width="6" stroke-linejoin="round"/>`,
-    star:     c => `<polygon points="${STAR}" fill="${c}" stroke="${c}" stroke-width="5" stroke-linejoin="round"/>`,
-    cross:    c => `<path d="M35 5h30v30h30v30H65v30H35V65H5V35h30z" fill="${c}" stroke="${c}" stroke-width="4" stroke-linejoin="round"/>`,
-    circle:   c => `<circle cx="50" cy="50" r="42" fill="${c}"/>`,
+  const HEART = 'M50 90 C22 68 4 50 10 30 C15 13 38 9 50 27 C62 9 85 13 90 30 C96 50 78 68 50 90 Z';
+  const GEM = '50,5 88,38 50,96 12,38';
+  const SHAPES = {
+    orb: (c, k) => `
+      <ellipse cx="52" cy="95" rx="34" ry="6" fill="#000" opacity=".2"/>
+      <circle cx="50" cy="52" r="40" fill="url(#g-${c})"/>
+      <circle cx="50" cy="52" r="40" fill="url(#shade)"/>
+      <circle cx="50" cy="52" r="40" fill="none" stroke="${k.dark}" stroke-opacity=".7" stroke-width="3"/>
+      <ellipse cx="37" cy="33" rx="15" ry="9" fill="url(#gloss)" transform="rotate(-28 37 33)"/>
+      <circle cx="29" cy="49" r="3.5" fill="#fff" opacity=".85"/>
+      <path d="M24 70 Q50 95 76 70" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="3" stroke-linecap="round"/>`,
+    gem: (c, k) => `
+      <ellipse cx="52" cy="97" rx="26" ry="5" fill="#000" opacity=".2"/>
+      <polygon points="${GEM}" fill="url(#g-${c})"/>
+      <polygon points="50,5 88,38 12,38" fill="#fff" opacity=".2"/>
+      <polygon points="50,5 32,38 68,38" fill="#fff" opacity=".42"/>
+      <polygon points="12,38 32,38 50,96" fill="#fff" opacity=".12"/>
+      <polygon points="68,38 88,38 50,96" fill="#000" opacity=".2"/>
+      <polygon points="32,38 68,38 50,96" fill="#000" opacity=".06"/>
+      <polygon points="${GEM}" fill="url(#shade)" opacity=".7"/>
+      <polygon points="50,11 58,24 42,24" fill="#fff" opacity=".9"/>
+      <line x1="12" y1="38" x2="88" y2="38" stroke="#fff" stroke-opacity=".5" stroke-width="1.5"/>
+      <polygon points="${GEM}" fill="none" stroke="${k.dark}" stroke-opacity=".75" stroke-width="3" stroke-linejoin="round"/>`,
+    star: (c, k) => `
+      <ellipse cx="52" cy="91" rx="32" ry="6" fill="#000" opacity=".2"/>
+      <polygon points="${STAR}" fill="url(#g-${c})" stroke-linejoin="round"/>
+      <polygon points="${STAR}" fill="url(#shade)"/>
+      <polygon points="${STAR}" fill="none" stroke="${k.dark}" stroke-opacity=".75" stroke-width="3" stroke-linejoin="round"/>
+      <polygon points="50,14 56,33 44,33" fill="#fff" opacity=".6"/>
+      <ellipse cx="40" cy="46" rx="9" ry="5" fill="url(#gloss)" transform="rotate(-30 40 46)"/>
+      <circle cx="33" cy="41" r="2.5" fill="#fff" opacity=".9"/>`,
+    heart: (c, k) => `
+      <ellipse cx="52" cy="93" rx="30" ry="6" fill="#000" opacity=".2"/>
+      <path d="${HEART}" fill="url(#g-${c})"/>
+      <path d="${HEART}" fill="url(#shade)"/>
+      <path d="${HEART}" fill="none" stroke="${k.dark}" stroke-opacity=".75" stroke-width="3" stroke-linejoin="round"/>
+      <ellipse cx="33" cy="33" rx="12" ry="7" fill="url(#gloss)" transform="rotate(-32 33 33)"/>
+      <circle cx="26" cy="45" r="3" fill="#fff" opacity=".85"/>
+      <path d="M32 68 Q50 90 66 70" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width="3" stroke-linecap="round"/>`,
+    ring: (c, k) => `
+      <ellipse cx="52" cy="95" rx="34" ry="6" fill="#000" opacity=".2"/>
+      <path d="M50 10 A40 40 0 1 0 50 90 A40 40 0 1 0 50 10 Z M50 34 A16 16 0 1 1 50 66 A16 16 0 1 1 50 34 Z" fill="url(#g-${c})" fill-rule="evenodd"/>
+      <path d="M50 10 A40 40 0 1 0 50 90 A40 40 0 1 0 50 10 Z M50 34 A16 16 0 1 1 50 66 A16 16 0 1 1 50 34 Z" fill="url(#shade)" fill-rule="evenodd"/>
+      <circle cx="50" cy="50" r="40" fill="none" stroke="${k.dark}" stroke-opacity=".7" stroke-width="3"/>
+      <circle cx="50" cy="50" r="16" fill="none" stroke="${k.dark}" stroke-opacity=".5" stroke-width="2.5"/>
+      <ellipse cx="34" cy="26" rx="12" ry="6" fill="url(#gloss)" transform="rotate(-35 34 26)"/>
+      <circle cx="26" cy="42" r="3" fill="#fff" opacity=".85"/>`,
+    tri: (c, k) => `
+      <ellipse cx="52" cy="94" rx="34" ry="6" fill="#000" opacity=".2"/>
+      <polygon points="50,10 92,86 8,86" fill="url(#g-${c})" stroke="url(#g-${c})" stroke-width="10" stroke-linejoin="round"/>
+      <polygon points="50,10 92,86 8,86" fill="url(#shade)" stroke="url(#shade)" stroke-width="10" stroke-linejoin="round"/>
+      <polygon points="50,10 92,86 8,86" fill="none" stroke="${k.dark}" stroke-opacity=".75" stroke-width="3" stroke-linejoin="round"/>
+      <polygon points="50,22 60,42 40,42" fill="#fff" opacity=".55"/>
+      <ellipse cx="38" cy="52" rx="8" ry="4" fill="url(#gloss)" transform="rotate(-30 38 52)"/>
+      <circle cx="34" cy="62" r="2.5" fill="#fff" opacity=".9"/>`,
   };
-
-  const LINES = {
-    intro: [
-      "Welcome to my table. Find the rule... if you can.",
-      "Four piles, one secret rule. Let's see what you've got.",
-    ],
-    correct: ["Nice!", "That's it!", "Sharp.", "Yes!", "Keep going.", "You've got the hang of it.", "Correct."],
-    hot: ["On fire! 🔥", "Unstoppable!", "Is this even a challenge for you?", "Someone's paying attention."],
-    wrong: ["Nope.", "Not that pile.", "Hmm, try something else.", "Close, but no.", "Wrong pile, friend."],
-    wrongAfterShift: ["Something feels... different, doesn't it?", "Rules are rules. Until they aren't. 😏", "What worked before may not work now."],
-    cracked: ["You cracked it! 🎉", "Rule found. Impressive.", "Ha! You're good at this.", "Got it in one. Well, in six."],
-    crackedTease: ["Now let's see if you can keep up...", "Don't get comfortable. 😏", "Fresh deal, fresh ideas."],
-    winEnd: ["You beat the house. Come back any time.", "Six rules, cracked. I'm out of tricks."],
-    deckEnd: ["That's the whole deck. Not bad.", "Out of cards! Let's see how you did."],
+  const PIP_LAYOUT = {
+    1: [[50, 50]], 2: [[50, 30], [50, 70]], 3: [[30, 26], [50, 50], [70, 74]], 4: [[31, 30], [69, 30], [31, 70], [69, 70]],
+    5: [[28, 28], [72, 28], [50, 50], [28, 72], [72, 72]], 6: [[32, 22], [68, 22], [32, 50], [68, 50], [32, 78], [68, 78]],
   };
+  const PIP_SIZE = { 1: 60, 2: 42, 3: 38, 4: 40, 5: 34, 6: 30 };
 
-  // ---------- DOM ----------
+  (function installDefs() {
+    const grads = Object.entries(COLORS).map(([name, c]) => `
+      <radialGradient id="g-${name}" cx="35%" cy="28%" r="78%">
+        <stop offset="0" stop-color="${c.light}"/><stop offset=".42" stop-color="${c.base}"/><stop offset="1" stop-color="${c.dark}"/>
+      </radialGradient>`).join('');
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('width', '0'); svg.setAttribute('height', '0');
+    svg.style.position = 'absolute';
+    svg.innerHTML = `<defs>${grads}
+      <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+      <filter id="bevel" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB">
+        <feGaussianBlur in="SourceAlpha" stdDeviation="3.5" result="blur"/>
+        <feSpecularLighting in="blur" surfaceScale="7" specularConstant=".8" specularExponent="16" lighting-color="#fff" result="spec"><fePointLight x="28" y="8" z="110"/></feSpecularLighting>
+        <feComposite in="spec" in2="SourceAlpha" operator="in" result="specIn"/>
+        <feComposite in="SourceGraphic" in2="specIn" operator="arithmetic" k1="0" k2="1" k3=".9" k4="0"/>
+      </filter>
+      <radialGradient id="shade" cx="50%" cy="45%" r="58%"><stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset=".62" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".42"/></radialGradient>
+    </defs>`;
+    document.body.prepend(svg);
+  })();
+  // WebKit (every iOS browser, and Safari on Mac) rasterizes SVG lighting filters at low
+  // resolution inside backdrop-filtered tiles and sometimes drops them entirely, so the
+  // bevel light is only used elsewhere. The gradients and gloss carry the look on their own.
+  const UA = navigator.userAgent;
+  const IOS = /iP(hone|ad|od)/.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const SAFARI = /Safari/.test(UA) && !/Chrome|Chromium|CriOS|Edg|OPR|Android/.test(UA);
+  const USE_BEVEL = false; // the lighting filter rasterized the vectors and looked soft, see style.css
+  if (IOS || SAFARI) document.documentElement.classList.add("webkit");
+  // Foreground sweets get the bevel light; background ones stay cheap.
+  const sweetSVG = (shape, color, cls = 'pip__svg') => {
+    const body = SHAPES[shape](color, COLORS[color]);
+    return `<svg class="${cls}" viewBox="0 0 100 100" shape-rendering="geometricPrecision">${cls && USE_BEVEL ? `<g filter="url(#bevel)">${body}</g>` : body}</svg>`;
+  };
+  function pipsHTML(card) {
+    const size = PIP_SIZE[card.count];
+    return PIP_LAYOUT[card.count].map(([x, y], i) =>
+      `<span class="pip" style="left:${x}%;top:${y}%;width:${size}%;--i:${i}">${sweetSVG(card.shape, card.color)}</span>`).join('');
+  }
+  const describe = c => `${c.count} ${c.color} ${c.shape}${c.count > 1 ? 's' : ''}`;
+  const STAR_ICON = '<svg class="star" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3 6.6 7 .8-5.2 4.9 1.4 7.1L12 18l-6.2 3.4 1.4-7.1L2 9.4l7-.8z"/></svg>';
+
+  function buildDeck() {
+    const deck = [];
+    const N = KEYS.length;
+    for (let c = 0; c < N; c++) for (let s = 0; s < N; s++) for (let n = 0; n < N; n++) {
+      if (c === s || s === n || c === n) continue;
+      deck.push({ color: COLOR_LIST[c], shape: SHAPE_LIST[s], count: n + 1 });
+    }
+    return shuffle(deck);
+  }
+  const sameCard = (a, b) => a.color === b.color && a.shape === b.shape && a.count === b.count;
+
+  // ---------- Utilities ----------
   const $ = id => document.getElementById(id);
   const el = {
-    score: $('score'), streak: $('streak'), cats: $('cats'), cardsLeft: $('cards-left'),
-    mute: $('mute'), dealer: $('dealer'), bubble: $('bubble'), bubbleText: $('bubble-text'),
-    deck: $('deck'), stage: $('stage'), piles: $('piles'),
-    startOverlay: $('start-overlay'), startBtn: $('start-btn'), classic: $('classic-mode'),
-    endOverlay: $('end-overlay'), endEyebrow: $('end-eyebrow'), endTitle: $('end-title'),
-    endRank: $('end-rank'), endResults: $('end-results'), againBtn: $('again-btn'),
+    score: $('score'), multi: $('multi'), pips: $('pips'), streakNum: $('streak-num'), stars: $('stars'), cardsLeft: $('cards-left'),
+    progress: $('progress'), mute: $('mute'), timeStat: $('time-stat'), time: $('time'), timer: $('timer'), timerRect: $('timer-rect'), hud: document.querySelector('.hud'), levelChip: $('level-chip'), ruleChip: $('rule-chip'),
+    table: $('table'), coach: $('coach'), coachText: $('coach-text'),
+    board: $('board'), center: $('center'), wrap: $('card-wrap'), toast: $('toast'), toastTxt: $('toast-txt'),
+    startOverlay: $('start-overlay'), levels: $('levels'),
+    endOverlay: $('end-overlay'), endEyebrow: $('end-eyebrow'), endTitle: $('end-title'), endStars: $('end-stars'),
+    endRank: $('end-rank'), endUnlock: $('end-unlock'), endResults: $('end-results'), hint: document.querySelector('.hint'),
+    nextBtn: $('next-btn'), againBtn: $('again-btn'), levelsBtn: $('levels-btn'),
   };
-
+  let targets = {}, cues = {};
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const D = ms => (reduceMotion ? 0 : ms);
   const wait = ms => new Promise(r => setTimeout(r, ms));
-  const pick = (arr, avoid) => {
-    let choice = arr[Math.floor(Math.random() * arr.length)];
-    if (arr.length > 1 && choice === avoid) choice = arr[(arr.indexOf(choice) + 1) % arr.length];
-    return choice;
-  };
-  const shuffle = arr => {
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const rand = arr => arr[Math.floor(Math.random() * arr.length)];
+  const randInt = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const pick = (arr, avoid) => { let c = rand(arr); if (arr.length > 1 && c === avoid) c = arr[(arr.indexOf(c) + 1) % arr.length]; return c; };
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
     return arr;
-  };
+  }
+  const buzz = pattern => { try { if (navigator.vibrate && navigator.userActivation?.hasBeenActive) navigator.vibrate(pattern); } catch (e) { /* optional */ } };
+  function replay(node, cls) { node.classList.remove(cls); void node.offsetWidth; node.classList.add(cls); }
+  function shake(big = false) {
+    if (reduceMotion) return;
+    el.table.classList.remove('shake', 'shake-big');
+    void el.table.offsetWidth;
+    el.table.classList.add(big ? 'shake-big' : 'shake');
+  }
+
+  // ---------- Progress (unlocks + best scores) ----------
+  const progress = (() => {
+    const p = { unlocked: 1, best: {}, last: 1 };
+    try { Object.assign(p, JSON.parse(localStorage.getItem('sweetsort-progress') || '{}')); } catch (e) { /* fresh */ }
+    if (location.search.includes('unlock')) p.unlocked = LEVELS.length - 1;
+    const save = () => { try { localStorage.setItem('sweetsort-progress', JSON.stringify(p)); } catch (e) { /* private mode */ } };
+    return { p, save };
+  })();
 
   // ---------- Sound ----------
   const sound = {
-    enabled: localStorage.getItem('cardsorter-sound') !== 'off',
-    ctx: null,
+    enabled: localStorage.getItem('sweetsort-sound') !== 'off',
+    ctx: null, noiseBuf: null,
     ensure() {
       if (!this.ctx) {
         const AC = window.AudioContext || window.webkitAudioContext;
         if (!AC) return false;
         this.ctx = new AC();
+        const n = Math.floor(this.ctx.sampleRate * 0.4);
+        this.noiseBuf = this.ctx.createBuffer(1, n, this.ctx.sampleRate);
+        const d = this.noiseBuf.getChannelData(0);
+        for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
       }
       if (this.ctx.state === 'suspended') this.ctx.resume();
       return true;
     },
-    tone(freq, dur, type = 'sine', vol = 0.06, delay = 0) {
+    tone(freq, dur, type = 'sine', vol = 0.06, delay = 0, slide = 0) {
       if (!this.enabled) return;
       try {
         if (!this.ensure()) return;
         const t = this.ctx.currentTime + delay;
-        const o = this.ctx.createOscillator();
-        const g = this.ctx.createGain();
-        o.type = type;
-        o.frequency.value = freq;
+        const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+        o.type = type; o.frequency.setValueAtTime(freq, t);
+        if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + dur);
         g.gain.setValueAtTime(0.0001, t);
         g.gain.exponentialRampToValueAtTime(vol, t + 0.012);
         g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
         o.connect(g).connect(this.ctx.destination);
-        o.start(t);
-        o.stop(t + dur + 0.05);
-      } catch (e) { /* audio is a nicety, never fatal */ }
+        o.start(t); o.stop(t + dur + 0.05);
+      } catch (e) { /* audio is a nicety */ }
     },
-    deal()  { this.tone(420, 0.06, 'triangle', 0.04); this.tone(640, 0.05, 'triangle', 0.03, 0.05); },
-    good()  { this.tone(660, 0.12, 'sine', 0.07); this.tone(990, 0.18, 'sine', 0.07, 0.1); },
-    bad()   { this.tone(200, 0.22, 'sawtooth', 0.05); this.tone(150, 0.25, 'sawtooth', 0.04, 0.08); },
-    level() { [523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.22, 'triangle', 0.07, i * 0.09)); },
-    win()   { [523, 659, 784, 1047, 1319].forEach((f, i) => this.tone(f, 0.3, 'triangle', 0.07, i * 0.12)); },
-    click() { this.tone(300, 0.04, 'square', 0.02); },
+    noise(dur = 0.08, vol = 0.05, freq = 1800, delay = 0) {
+      if (!this.enabled) return;
+      try {
+        if (!this.ensure()) return;
+        const t = this.ctx.currentTime + delay;
+        const src = this.ctx.createBufferSource(); src.buffer = this.noiseBuf;
+        const f = this.ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = 0.9;
+        const g = this.ctx.createGain();
+        g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        src.connect(f).connect(g).connect(this.ctx.destination);
+        src.start(t); src.stop(t + dur + 0.02);
+      } catch (e) { /* optional */ }
+    },
+    chime(freq, dur = 0.35, vol = 0.06, delay = 0) {
+      this.tone(freq, dur, 'sine', vol, delay);
+      this.tone(freq * 2, dur * 0.6, 'sine', vol * 0.35, delay);
+      this.tone(freq * 3, dur * 0.35, 'triangle', vol * 0.1, delay);
+    },
+    pop()   { this.noise(0.06, 0.06, 900); this.tone(600, 0.08, 'sine', 0.04, 0, 1000); },
+    tick()  { this.noise(0.025, 0.035, 3000); },
+    good(streak = 1) {
+      const f = 523 * Math.pow(2, (Math.min(streak, 9) - 1) * 2 / 12);
+      this.chime(f, 0.3, 0.06); this.chime(f * 1.5, 0.32, 0.04, 0.07); this.noise(0.05, 0.03, 2600);
+    },
+    bad()   { this.tone(200, 0.2, 'triangle', 0.06, 0, 120); this.noise(0.14, 0.045, 450); },
+    ouch()  { this.tone(260, 0.28, 'sawtooth', 0.04, 0, 90); this.noise(0.2, 0.05, 300); },
+    back()  { this.tone(400, 0.08, 'sine', 0.03, 0, 300); },
+    level() { [523, 659, 784, 1047, 1319].forEach((f, i) => this.chime(f, 0.42, 0.06, i * 0.07)); this.noise(0.35, 0.05, 1500, 0.3); },
+    win()   { [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => this.chime(f, 0.5, 0.06, i * 0.11)); },
+    star()  { this.chime(1568, 0.3, 0.05); this.noise(0.08, 0.03, 4000); },
+    whoosh() { this.noise(0.22, 0.035, 700); this.tone(300, 0.2, 'sine', 0.015, 0, 900); },
+    ready() { this.tone(880, 0.05, 'sine', 0.03); this.tone(1320, 0.06, 'sine', 0.03, 0.04); },
+    count() { this.tone(1400 + Math.random() * 300, 0.03, 'square', 0.012); },
     toggle() {
       this.enabled = !this.enabled;
-      localStorage.setItem('cardsorter-sound', this.enabled ? 'on' : 'off');
+      localStorage.setItem('sweetsort-sound', this.enabled ? 'on' : 'off');
       el.mute.textContent = this.enabled ? '🔊' : '🔇';
-      if (this.enabled) this.click();
+      if (this.enabled) this.pop();
     },
   };
   el.mute.textContent = sound.enabled ? '🔊' : '🔇';
   el.mute.addEventListener('click', () => sound.toggle());
 
-  // ---------- Confetti ----------
-  const confetti = (() => {
-    const cv = $('confetti');
+  // ---------- Announcer: pre-rendered clips, browser speech as a fallback ----------
+  const CLIPS = ['sweet', 'tasty', 'delicious', 'divine', 'rule-cracked', 'sweet-victory', 'level-up', 'tutorial-complete'];
+  const voice = {
+    enabled: localStorage.getItem('sweetsort-voice') !== 'off',
+    clips: {}, picked: null, loaded: false,
+    load() {
+      if (this.loaded) return;
+      this.loaded = true;
+      for (const n of CLIPS) {
+        const a = new Audio(`voice/${n}.m4a`);
+        a.preload = 'auto'; a.volume = 0.95;
+        a.addEventListener('error', () => { this.clips[n] = null; });
+        this.clips[n] = a;
+      }
+    },
+    say(text, key) {
+      if (!this.enabled || !sound.enabled) return;
+      const k = key || text.toLowerCase().replace(/[^a-z ]/g, '').trim().replace(/\s+/g, '-');
+      const a = this.clips[k];
+      if (a && !a.error) {
+        try { a.currentTime = 0; const p = a.play(); if (p) p.catch(() => this.speak(text)); return; } catch (e) { /* fall through */ }
+      }
+      this.speak(text);
+    },
+    pickVoice() {
+      if (!('speechSynthesis' in window)) return null;
+      const voices = speechSynthesis.getVoices();
+      const en = voices.filter(v => /^en/i.test(v.lang));
+      const quality = en.find(v => /natural|premium|enhanced/i.test(v.name));
+      if (quality) return quality;
+      for (const name of ['Google US English', 'Google UK English Male', 'Daniel', 'Samantha', 'Alex', 'Microsoft Guy', 'Microsoft David']) {
+        const v = en.find(v => v.name.startsWith(name)); if (v) return v;
+      }
+      return en[0] || voices[0] || null;
+    },
+    speak(text) {
+      if (!('speechSynthesis' in window)) return;
+      try {
+        if (!this.picked) this.picked = this.pickVoice();
+        speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text.replace(/[!.]/g, ''));
+        if (this.picked) u.voice = this.picked;
+        u.pitch = 0.8; u.rate = 0.95; u.volume = 1;
+        speechSynthesis.speak(u);
+      } catch (e) { /* optional */ }
+    },
+  };
+  if ('speechSynthesis' in window) speechSynthesis.addEventListener('voiceschanged', () => { voice.picked = voice.pickVoice(); });
+
+  // ---------- Particles ----------
+  const fx = (() => {
+    const cv = $('fx');
     const ctx = cv.getContext('2d');
-    const palette = ['#f43f5e', '#f59e0b', '#22c55e', '#3b82f6', '#a855f7', '#facc15', '#fff'];
-    let parts = [], raf = 0, dpr = 1;
+    const palette = ['#f472b6', '#fde047', '#4ade80', '#60a5fa', '#c084fc', '#fff'];
+    let parts = [], raf = 0;
     function resize() {
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
-      cv.width = Math.floor(innerWidth * dpr);
-      cv.height = Math.floor(innerHeight * dpr);
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      cv.width = Math.floor(innerWidth * dpr); cv.height = Math.floor(innerHeight * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
     window.addEventListener('resize', resize);
     resize();
-    function burst(x, y, n = 90, spread = 1) {
+    function sparks(x, y, n = 26, color, power = 1) {
       if (reduceMotion) return;
       for (let i = 0; i < n; i++) {
-        parts.push({
-          x, y,
-          vx: (Math.random() - 0.5) * 16 * spread,
-          vy: -Math.random() * 13 - 5,
-          g: 0.38,
-          w: 6 + Math.random() * 6, h: 4 + Math.random() * 6,
-          r: Math.random() * Math.PI, vr: (Math.random() - 0.5) * 0.3,
-          c: palette[Math.floor(Math.random() * palette.length)],
-          life: 1, decay: 0.009 + Math.random() * 0.008,
-        });
+        const a = Math.random() * Math.PI * 2, sp = (2 + Math.random() * 6) * power;
+        parts.push({ kind: Math.random() < 0.35 ? 'star' : 'spark', x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 1, g: 0.08,
+          r: 2 + Math.random() * 3, rot: Math.random() * Math.PI, vr: (Math.random() - 0.5) * 0.4,
+          c: color || rand(palette), life: 1, decay: 0.02 + Math.random() * 0.02 });
+      }
+      if (!raf) raf = requestAnimationFrame(tick);
+    }
+    function confetti(x, y, n = 90, spread = 1) {
+      if (reduceMotion) return;
+      for (let i = 0; i < n; i++) {
+        parts.push({ kind: 'confetti', x, y, vx: (Math.random() - 0.5) * 16 * spread, vy: -Math.random() * 13 - 5, g: 0.36,
+          w: 6 + Math.random() * 6, h: 4 + Math.random() * 6, rot: Math.random() * Math.PI, vr: (Math.random() - 0.5) * 0.3,
+          round: Math.random() < 0.4, c: rand(palette), life: 1, decay: 0.008 + Math.random() * 0.008 });
       }
       if (!raf) raf = requestAnimationFrame(tick);
     }
@@ -157,368 +362,641 @@
       ctx.clearRect(0, 0, innerWidth, innerHeight);
       parts = parts.filter(p => p.life > 0);
       for (const p of parts) {
-        p.vy += p.g; p.x += p.vx; p.y += p.vy; p.vx *= 0.985; p.r += p.vr; p.life -= p.decay;
+        p.vy += p.g; p.x += p.vx; p.y += p.vy; p.vx *= 0.98; p.life -= p.decay;
         ctx.save();
-        ctx.globalAlpha = Math.max(0, Math.min(1, p.life * 1.5));
-        ctx.translate(p.x, p.y);
-        ctx.rotate(p.r);
+        ctx.globalAlpha = clamp(p.life * 1.4, 0, 1);
         ctx.fillStyle = p.c;
-        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        ctx.translate(p.x, p.y);
+        if (p.kind === 'spark') {
+          ctx.shadowColor = p.c; ctx.shadowBlur = 8;
+          ctx.beginPath(); ctx.arc(0, 0, Math.max(0, p.r * p.life), 0, Math.PI * 2); ctx.fill();
+        } else if (p.kind === 'star') {
+          p.rot += p.vr; ctx.rotate(p.rot);
+          const R = Math.max(0, p.r * 2.2 * p.life), r = R * 0.38;
+          ctx.shadowColor = p.c; ctx.shadowBlur = 6;
+          ctx.beginPath();
+          for (let i = 0; i < 8; i++) { const rad = i % 2 ? r : R, a = i * Math.PI / 4; ctx.lineTo(Math.cos(a) * rad, Math.sin(a) * rad); }
+          ctx.closePath(); ctx.fill();
+        } else {
+          p.rot += p.vr; ctx.rotate(p.rot);
+          if (p.round) { ctx.beginPath(); ctx.arc(0, 0, p.w / 2, 0, Math.PI * 2); ctx.fill(); }
+          else ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        }
         ctx.restore();
       }
       raf = parts.length ? requestAnimationFrame(tick) : 0;
     }
-    return { burst };
+    return { sparks, confetti };
   })();
 
-  // ---------- Cards ----------
-  function cardHTML(card) {
-    const size = PIP_SIZE[card.count];
-    return PIP_LAYOUT[card.count].map(([x, y]) =>
-      `<svg class="pip" viewBox="0 0 100 100" style="left:${x}%;top:${y}%;width:${size}%">${SHAPE_SVG[card.shape](COLORS[card.color])}</svg>`
-    ).join('');
-  }
-  function makeCard(card, key = false) {
-    const node = document.createElement('div');
-    node.className = 'card' + (key ? ' card--key' : '');
-    node.innerHTML = cardHTML(card);
-    node.setAttribute('aria-label', `${card.count} ${card.color} ${card.shape}${card.count > 1 ? 's' : ''}`);
-    return node;
-  }
-  function buildDeck() {
-    // Every card matches a different key on each dimension, so feedback is never ambiguous.
-    const deck = [];
-    for (let c = 0; c < 4; c++) for (let s = 0; s < 4; s++) for (let n = 0; n < 4; n++) {
-      if (c === s || s === n || c === n) continue;
-      deck.push({ color: KEYS[c].color, shape: KEYS[s].shape, count: KEYS[n].count });
+  // ---------- Build the world ----------
+  (function floatingSweets() {
+    if (reduceMotion) return;
+    let html = '';
+    for (let i = 0; i < 14; i++) {
+      const size = 26 + Math.random() * 54;
+      html += `<span class="bg-candy" style="left:${Math.random() * 100}%;top:${Math.random() * 100}%;width:${size}px;` +
+        `--d:${10 + Math.random() * 12}s;--delay:${-Math.random() * 20}s;--r:${Math.random() * 60 - 30}deg;opacity:${(0.14 + Math.random() * 0.18).toFixed(2)}">` +
+        `${sweetSVG(rand(SHAPE_LIST), rand(COLOR_LIST), '')}</span>`;
     }
-    return shuffle(deck);
+    $('bg-candies').innerHTML = html;
+  })();
+  function buildBoard(n) {
+    LAYOUT = LAYOUTS[n] || LAYOUTS[4];
+    DIRS = LAYOUT.map(l => l.dir);
+    KEYS = DIRS.map((dir, i) => ({ dir, color: COLOR_LIST[i], shape: SHAPE_LIST[i], count: i + 1 }));
+    el.board.querySelectorAll('.target').forEach(t => t.remove());
+    el.center.querySelectorAll('.cue').forEach(c => c.remove());
+    targets = {}; cues = {};
+    LAYOUT.forEach((l, i) => {
+      const [ux, uy] = unitVec(l.dir);
+      const ang = Math.atan2(uy, ux) * 180 / Math.PI;
+      const t = document.createElement('div');
+      t.className = 'target';
+      t.dataset.dir = l.dir;
+      t.setAttribute('role', 'img');
+      t.setAttribute('aria-label', `${l.dir} pile: ${describe(KEYS[i])}`);
+      t.style.gridArea = l.area;
+      t.style.setProperty('--i', i);
+      t.style.setProperty('--lx', (-ux).toFixed(3));
+      t.style.setProperty('--ly', (-uy).toFixed(3));
+      t.innerHTML = `<span class="ring"></span><span class="pips-area">${pipsHTML(KEYS[i])}</span>` +
+        `<span class="chev" style="left:${50 - ux * 50}%;top:${50 - uy * 50}%;transform:translate(-50%,-50%) rotate(${ang - 45}deg)"></span>`;
+      el.board.insertBefore(t, el.center);
+      targets[l.dir] = t;
+      const c = document.createElement('span');
+      c.className = 'cue';
+      c.style.cssText = `left:${50 + ux * 62}%;top:${50 + uy * 60}%;transform:translate(-50%,-50%) rotate(${ang - 45}deg);animation-delay:${(i * 0.3).toFixed(1)}s`;
+      el.center.appendChild(c);
+      cues[l.dir] = c;
+    });
+    el.hint.textContent = `Slide the card toward a pile · or press 1 to ${DIRS.length}`;
   }
+  buildBoard(4);
+  const pipDots = [];
+  el.stars.innerHTML = STAR_ICON.repeat(6);
+  el.endStars.innerHTML = STAR_ICON.repeat(6);
+  const starEls = Array.from(el.stars.querySelectorAll('.star'));
+  const endStarEls = Array.from(el.endStars.querySelectorAll('.star'));
 
-  // ---------- Piles ----------
-  const pileEls = KEYS.map((key, i) => {
-    const btn = document.createElement('button');
-    btn.className = 'pile';
-    btn.type = 'button';
-    btn.setAttribute('aria-label', `Pile ${i + 1}: ${key.count} ${key.color} ${key.shape}${key.count > 1 ? 's' : ''}`);
-    btn.appendChild(makeCard(key, true));
-    const num = document.createElement('span');
-    num.className = 'pile__num';
-    num.textContent = String(i + 1);
-    btn.appendChild(num);
-    btn.addEventListener('click', () => choose(i));
-    el.piles.appendChild(btn);
-    return btn;
+  function renderLevels() {
+    const p = progress.p;
+    el.levels.innerHTML = LEVELS.map(l => {
+      const locked = false; // every level is open
+      const best = p.best[l.id];
+      return `<button class="level" data-id="${l.id}" ${locked ? 'disabled' : ''}>
+        <span class="level__num">${l.id === 0 ? '✎' : l.id}</span>
+        <span class="level__body"><span class="level__name">${l.name}</span><span class="level__tag">${l.tagline}</span></span>
+        <span class="level__meta">${locked ? '🔒' : best ? `★ ${best}` : 'New'}</span>
+      </button>`;
+    }).join('');
+  }
+  el.levels.addEventListener('click', e => {
+    const b = e.target.closest('.level');
+    if (b && !b.disabled) startGame(Number(b.dataset.id));
   });
 
-  // ---------- Dealer ----------
-  let moodTimer = 0;
-  let lastLine = '';
-  function say(text, mood = 'neutral', hold = 1800) {
-    el.bubbleText.textContent = text;
-    el.bubble.classList.remove('pop');
-    void el.bubble.offsetWidth;
-    el.bubble.classList.add('pop');
-    setMood(mood, hold);
-  }
-  function setMood(mood, hold = 1800) {
-    clearTimeout(moodTimer);
-    el.dealer.dataset.mood = mood;
-    el.dealer.className.baseVal = 'dealer';
-    void el.dealer.getBoundingClientRect();
-    if (mood !== 'neutral') el.dealer.classList.add('anim-' + mood);
-    if (mood !== 'neutral' && hold > 0) {
-      moodTimer = setTimeout(() => { el.dealer.dataset.mood = 'neutral'; el.dealer.className.baseVal = 'dealer'; }, hold);
-    }
-  }
-  function dealerNudge() {
-    el.dealer.classList.remove('anim-deal');
-    void el.dealer.getBoundingClientRect();
-    el.dealer.classList.add('anim-deal');
-    el.deck.classList.remove('pulse');
-    void el.deck.offsetWidth;
-    el.deck.classList.add('pulse');
-  }
-
   // ---------- HUD ----------
-  function bump(node) {
-    node.classList.remove('bump');
-    void node.offsetWidth;
-    node.classList.add('bump');
+  let shownScore = 0, scoreRaf = 0, scoreSettle = 0;
+  function tweenScore(to) {
+    cancelAnimationFrame(scoreRaf); clearTimeout(scoreSettle);
+    const from = shownScore, t0 = performance.now(), dur = D(450) || 1;
+    const step = t => {
+      const k = Math.min(1, (t - t0) / dur);
+      shownScore = Math.round(from + (to - from) * (1 - Math.pow(1 - k, 3)));
+      el.score.textContent = shownScore;
+      if (k < 1) scoreRaf = requestAnimationFrame(step);
+    };
+    scoreRaf = requestAnimationFrame(step);
+    scoreSettle = setTimeout(() => { cancelAnimationFrame(scoreRaf); shownScore = to; el.score.textContent = to; }, dur + 60);
+  }
+  function buildPips() {
+    el.pips.innerHTML = '';
+    pipDots.length = 0;
+    const n = Array.isArray(L.criterion) ? 0 : L.criterion;
+    for (let i = 0; i < n; i++) { const d = document.createElement('span'); d.className = 'pip-dot'; el.pips.appendChild(d); pipDots.push(d); }
+    el.hud.classList.toggle('no-pips', !L.pips);
+  }
+  function renderPips(burst = false) {
+    pipDots.forEach((d, i) => {
+      if (burst) { d.classList.remove('lit'); replay(d, 'burst'); d.addEventListener('animationend', () => d.classList.remove('burst'), { once: true }); return; }
+      const lit = i < S.run;
+      if (lit && !d.classList.contains('lit')) replay(d, 'lit');
+      else if (!lit) d.classList.remove('lit');
+    });
+    const txt = S.streak >= 3 ? `${S.streak} 🔥` : String(S.streak);
+    if (el.streakNum.textContent !== txt) { el.streakNum.textContent = txt; replay(el.streakNum, 'bump'); }
+  }
+  function renderMulti() {
+    const m = Math.min(S.streak, MULT_CAP);
+    if (m >= 2) {
+      const text = `×${m}`;
+      if (el.multi.textContent !== text || !el.multi.classList.contains('on')) { el.multi.textContent = text; replay(el.multi, 'on'); }
+    } else el.multi.classList.remove('on');
+  }
+  function renderStars(celebrate = false, shown = S.categories) {
+    starEls.forEach((s, i) => {
+      s.style.display = i < L.categories ? '' : 'none';
+      const lit = i < shown;
+      if (lit && !s.classList.contains('lit')) {
+        s.classList.add('lit');
+        if (celebrate) {
+          replay(s, 'pop');
+          const r = s.getBoundingClientRect();
+          fx.sparks(r.left + r.width / 2, r.top + r.height / 2, 18, '#fde047', 0.7);
+        }
+      } else if (!lit) s.classList.remove('lit', 'pop');
+    });
   }
   function renderHUD() {
-    if (el.score.textContent !== String(S.score)) { el.score.textContent = S.score; bump(el.score); }
-    const streakText = S.streak >= 3 ? `${S.streak} 🔥` : String(S.streak);
-    if (el.streak.textContent !== streakText) { el.streak.textContent = streakText; bump(el.streak); }
-    el.streak.classList.toggle('hot', S.streak >= 3);
-    const catsText = `${S.categories}/${MAX_CATEGORIES}`;
-    if (el.cats.textContent !== catsText) { el.cats.textContent = catsText; bump(el.cats); }
-    el.cardsLeft.textContent = MAX_TRIALS - S.trials;
+    if (shownScore !== S.score) { tweenScore(S.score); replay(el.score, 'bump'); }
+    renderMulti();
+    el.cardsLeft.textContent = L.trials - S.trials;
+    // Cards used, or rules cracked on levels that announce them (silent levels would leak the switch).
+    let p = S.trials / L.trials;
+    if (L.announce) p = Math.max(p, (S.categories + Math.min(S.run / S.criterion, 0.99)) / L.categories);
+    el.progress.style.width = `${(S.over ? 1 : Math.min(p, 0.99)) * 100}%`;
   }
-  function floatText(text, x, y, big = false) {
-    const node = document.createElement('div');
-    node.className = 'float' + (big ? ' float--big' : '');
-    node.textContent = text;
-    node.style.left = x + 'px';
-    node.style.top = y + 'px';
-    document.body.appendChild(node);
-    node.addEventListener('animationend', () => node.remove());
+  let toastTimer = 0;
+  function toast(text, kind = 't1') {
+    el.toastTxt.textContent = text; el.toastTxt.dataset.text = text;
+    el.toast.className = 'toast ' + kind;
+    void el.toast.offsetWidth;
+    el.toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.toast.classList.remove('show'), 1060);
   }
-  function showMark(pile, good) {
-    const mark = document.createElement('div');
-    mark.className = 'mark ' + (good ? 'mark--good' : 'mark--bad');
-    mark.textContent = good ? '✓' : '✗';
-    pile.appendChild(mark);
-    mark.addEventListener('animationend', () => mark.remove());
+  function floatText(text, x, y, cls = '') {
+    const n = document.createElement('div');
+    n.className = 'float ' + cls;
+    n.textContent = text;
+    n.style.left = x + 'px'; n.style.top = y + 'px';
+    document.body.appendChild(n);
+    n.addEventListener('animationend', () => n.remove());
   }
+  const LINES = {
+    t1: ['Sweet!', 'Yum!', 'Nice!', 'Tasty!', 'Mmm!', 'Yummy!'],
+    t2: ['Scrumptious!', 'Luscious!', 'Delightful!', 'Splendid!', 'Juicy!', 'Dreamy!'],
+    t3: ['Delicious!', 'Heavenly!', 'Exquisite!', 'Dazzling!', 'Marvelous!', 'Glorious!'],
+    t4: ['Divine!', 'Sublime!', 'Legendary!', 'Majestic!', 'Unstoppable!', 'Spectacular!', 'Phenomenal!'],
+    bad: ['Nope', 'Not there', 'Hmm...', 'Try again'],
+    ouch: ['Ouch!', 'Sour!', 'That stings'],
+    shift: ['Something changed...', 'New rule?', 'Rules shift...'],
+  };
+  let lastLine = '';
+  function tierFor(streak) {
+    const cls = streak >= 5 ? 't4' : streak === 4 ? 't3' : streak === 3 ? 't2' : 't1';
+    const text = pick(LINES[cls], lastLine); lastLine = text;
+    return { cls, text };
+  }
+
+  // ---------- Tutorial coaching ----------
+  function coach(text) {
+    el.coachText.textContent = text;
+    el.coach.classList.remove('hidden');
+    replay(el.coach, 'pop');
+  }
+  const correctDir = () => { const r = rule(); return KEYS.find(k => k[r] === S.card[r]).dir; };
+  function guide() {
+    const dir = correctDir();
+    DIRS.forEach(d => { targets[d].classList.toggle('hint', d === dir); cues[d].classList.toggle('on', d === dir); });
+    el.ruleChip.textContent = `Rule: ${RULE_WORD[rule()]}`;
+    replay(el.ruleChip, 'on');
+    const word = RULE_WORD[rule()], low = word.toLowerCase();
+    let msg;
+    if (S.trials === 0) msg = `Welcome! The secret rule right now is ${word}. Slide this card toward the glowing pile with the same ${low}.`;
+    else if (S.coachNext === 'shift') msg = `You cracked it, so the rule changed! Now it's ${word}. Match the ${low} this time.`;
+    else if (S.coachNext === 'wrong') msg = `Not that pile. The rule is ${word}: find the pile whose ${low} matches this card.`;
+    else msg = rand([`Nice! Same rule, keep matching by ${low}.`, `Yes! A few more like that cracks the rule.`, `Sweet. Follow the glowing pile.`]);
+    coach(msg);
+  }
+  function clearGuide() { DIRS.forEach(d => { targets[d].classList.remove('hint'); cues[d].classList.remove('on'); }); }
 
   // ---------- Game state ----------
   const S = {};
+  let L = LEVELS[1];
+  const newCriterion = () => (Array.isArray(L.criterion) ? randInt(L.criterion[0], L.criterion[1]) : L.criterion);
   function reset() {
     Object.assign(S, {
       deck: buildDeck(), deckPos: 0, card: null, cardEl: null,
-      ruleIdx: Math.floor(Math.random() * RULES.length), prevRule: null,
-      streak: 0, bestStreak: 0, categories: 0,
-      trials: 0, correct: 0, errors: 0, persev: 0,
-      score: 0, busy: true, over: false, shiftHintGiven: false,
-      lastWasShift: false, classic: el.classic.checked,
+      ruleIdx: Math.floor(Math.random() * RULES.length), prevRule: null, criterion: 0,
+      run: 0, streak: 0, bestStreak: 0, categories: 0, trials: 0, correct: 0, errors: 0, persev: 0, lost: 0, timeouts: 0,
+      score: 0, busy: true, over: false, lastWasShift: false, shiftHintGiven: false, coachNext: null,
     });
-    renderHUD();
+    S.criterion = newCriterion();
+    shownScore = 0; el.score.textContent = '0';
+    buildPips(); renderPips(); renderStars(); renderHUD();
   }
   const rule = () => RULES[S.ruleIdx];
-
   function nextCard() {
     if (S.deckPos >= S.deck.length) {
       const last = S.deck[S.deck.length - 1];
       S.deck = buildDeck();
-      if (S.deck[0] === last || sameCard(S.deck[0], last)) S.deck.push(S.deck.shift());
+      if (sameCard(S.deck[0], last)) S.deck.push(S.deck.shift());
       S.deckPos = 0;
     }
     return S.deck[S.deckPos++];
   }
-  const sameCard = (a, b) => a.color === b.color && a.shape === b.shape && a.count === b.count;
 
-  async function deal() {
-    if (S.over) return;
-    if (S.trials >= MAX_TRIALS || S.categories >= MAX_CATEGORIES) return endGame();
-    S.card = nextCard();
-    const node = makeCard(S.card);
-    node.classList.add('stage-card');
-    el.stage.appendChild(node);
-    S.cardEl = node;
-
-    dealerNudge();
-    sound.deal();
-    const d = el.deck.getBoundingClientRect();
-    const s = node.getBoundingClientRect();
-    const dx = d.left - s.left + (d.width - s.width) / 2;
-    const dy = d.top - s.top + (d.height - s.height) / 2;
-    const anim = node.animate([
-      { transform: `translate(${dx}px, ${dy}px) rotate(-16deg) scale(.6)`, opacity: 0 },
-      { opacity: 1, offset: 0.25 },
-      { transform: 'translate(0, 0) rotate(0) scale(1)', opacity: 1 },
-    ], { duration: D(520), easing: 'cubic-bezier(.2, .8, .2, 1)' });
-    await anim.finished.catch(() => {});
-    S.busy = false;
-    el.piles.classList.remove('locked');
+  // ---------- Turn timer ----------
+  const timer = {
+    raf: 0, ends: 0, total: 0, active: false, lastTick: 0,
+    start(sec) {
+      this.total = sec; this.ends = performance.now() + sec * 1000; this.active = true; this.lastTick = Math.ceil(sec);
+      el.timer.classList.remove('warn', 'urgent');
+      cancelAnimationFrame(this.raf);
+      this.raf = requestAnimationFrame(t => this.tick(t));
+    },
+    stop() { this.active = false; cancelAnimationFrame(this.raf); el.timer.classList.remove('urgent'); el.time.classList.remove('low'); },
+    tick(now) {
+      if (!this.active) return;
+      const left = Math.max(0, (this.ends - now) / 1000);
+      const frac = left / this.total;
+      el.timerRect.style.strokeDashoffset = (100 * (1 - frac)).toFixed(2);
+      el.time.textContent = left.toFixed(1);
+      el.time.classList.toggle('low', left < 2);
+      el.timer.classList.toggle('warn', frac < 0.5 && frac >= 0.25);
+      el.timer.classList.toggle('urgent', frac < 0.25);
+      const c = Math.ceil(left);
+      if (c < this.lastTick && c <= 3 && c > 0) { sound.tick(); this.lastTick = c; }
+      if (left <= 0) { this.stop(); timeOut(); return; }
+      this.raf = requestAnimationFrame(t => this.tick(t));
+    },
+  };
+  function sizeTimer() {
+    const w = el.wrap.offsetWidth + 18, h = el.wrap.offsetHeight + 18;
+    el.timer.setAttribute('viewBox', `0 0 ${w} ${h}`);
+    for (const r of el.timer.querySelectorAll('rect')) { r.setAttribute('x', 3); r.setAttribute('y', 3); r.setAttribute('width', w - 6); r.setAttribute('height', h - 6); r.setAttribute('rx', 24); }
   }
-
-  function flyTo(pile) {
-    const node = S.cardEl;
-    S.cardEl = null;
-    const a = node.getBoundingClientRect();
-    const b = pile.querySelector('.card').getBoundingClientRect();
-    const clone = node.cloneNode(true);
-    clone.classList.add('flying');
-    clone.classList.remove('stage-card');
-    clone.style.width = a.width + 'px';
-    clone.style.height = a.height + 'px';
-    document.body.appendChild(clone);
-    node.remove();
-    const scale = b.width / a.width;
-    const x1 = b.left + (b.width - a.width) / 2;
-    const y1 = b.top + (b.height - a.height) / 2;
-    const rot = (Math.random() - 0.5) * 10;
-    const anim = clone.animate([
-      { transform: `translate(${a.left}px, ${a.top}px) scale(1) rotate(0)` },
-      { transform: `translate(${x1}px, ${y1}px) scale(${scale}) rotate(${rot}deg)` },
-    ], { duration: D(380), easing: 'cubic-bezier(.3, .7, .3, 1)', fill: 'forwards' });
-    return anim.finished.catch(() => {}).then(() => clone.remove());
-  }
-
-  async function choose(i) {
+  window.addEventListener('resize', () => { if (L.timer) sizeTimer(); });
+  const turnSeconds = () => Math.max(L.timer.min, L.timer.start - L.timer.step * S.trials);
+  async function timeOut() {
     if (S.busy || S.over || !S.cardEl) return;
     S.busy = true;
-    el.piles.classList.add('locked');
-    const pile = pileEls[i];
-    const key = KEYS[i];
-    const card = S.card;
+    const card = S.cardEl; S.cardEl = null;
+    clearTimeout(idleTimer); clearGuide();
+    S.trials++; S.errors++; S.timeouts++; S.run = 0; S.streak = 0; S.coachNext = 'wrong';
+    for (const d of DIRS) { targets[d].style.setProperty('--hot', '0'); targets[d].classList.remove('ready'); }
+    card.classList.remove('dragging');
+    card.style.transform = '';
+    card.animate([
+      { transform: 'scale(1)', opacity: 1 },
+      { transform: 'scale(1.06) rotate(-3deg)', opacity: 1, offset: 0.3 },
+      { transform: 'scale(.5) rotate(4deg)', opacity: 0 },
+    ], { duration: D(480), easing: 'ease-in', fill: 'forwards' });
+    el.wrap.classList.add('empty');
+    toast('Too slow!', 'bad');
+    sound.bad(); buzz([30, 40, 30]); shake(false);
+    renderPips(); renderHUD();
+    await wait(D(720) + 40);
+    card.remove();
+    deal();
+  }
+
+  // ---------- Idle hint ----------
+  let idleTimer = 0;
+  function armIdle() {
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => {
+      const card = S.cardEl;
+      if (!card || S.busy || S.over || reduceMotion) return;
+      const [nx, ny] = unitVec(L.guided ? correctDir() : rand(DIRS));
+      card.style.setProperty('--nx', nx); card.style.setProperty('--ny', ny);
+      replay(card, 'nudge');
+      card.addEventListener('animationend', () => card.classList.remove('nudge'), { once: true });
+      if (!L.guided) el.center.classList.remove('touched');
+      sound.back();
+      armIdle();
+    }, 5000);
+  }
+
+  // ---------- Dealing ----------
+  function deal() {
+    if (S.over) return;
+    if (S.trials >= L.trials || S.categories >= L.categories) return endGame();
+    S.card = nextCard();
+    const node = document.createElement('div');
+    node.className = 'card enter';
+    node.setAttribute('role', 'img');
+    node.setAttribute('aria-label', describe(S.card));
+    node.innerHTML = pipsHTML(S.card) + [[18, 16, 0], [84, 28, 0.8], [26, 82, 1.5]].map(([x, y, d]) =>
+      `<i class="sparkle" style="left:${x}%;top:${y}%;animation-delay:${d}s"></i>`).join('');
+    el.wrap.classList.remove('empty');
+    el.wrap.appendChild(node);
+    S.cardEl = node;
+    attachDrag(node);
+    sound.pop();
+    node.addEventListener('animationend', () => node.classList.remove('enter'), { once: true });
+    if (L.guided) guide();
+    S.busy = false;
+    armIdle();
+    if (L.timer) timer.start(turnSeconds());
+  }
+
+  // ---------- Drag to sort ----------
+  function attachDrag(card) {
+    let drag = null;
+    const onDown = e => {
+      if (S.busy || drag) return;
+      drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, t: performance.now(), vx: 0, vy: 0, dir: null, ready: false };
+      // Where each pile sits relative to the card, so a slide picks the pile closest to its angle.
+      const w = el.wrap.getBoundingClientRect();
+      drag.angles = DIRS.map(d => { const r = targets[d].getBoundingClientRect(); return { d, a: Math.atan2(r.top + r.height / 2 - (w.top + w.height / 2), r.left + r.width / 2 - (w.left + w.width / 2)) }; });
+      try { card.setPointerCapture(e.pointerId); } catch (err) { /* synthetic pointer */ }
+      clearTimeout(idleTimer);
+      card.classList.remove('nudge');
+      card.classList.add('dragging');
+      card.getAnimations().forEach(a => a.cancel());
+      el.center.classList.add('touched');
+    };
+    const onMove = e => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const now = performance.now(), dt = Math.max(1, now - drag.t);
+      drag.vx = (e.clientX - drag.x) / dt; drag.vy = (e.clientY - drag.y) / dt;
+      drag.x = e.clientX; drag.y = e.clientY; drag.t = now;
+      const dx = drag.x - drag.x0, dy = drag.y - drag.y0;
+      const mag = Math.hypot(dx, dy);
+      card.style.transform = `translate(${dx}px, ${dy}px) rotate(${clamp(dx * 0.08, -14, 14)}deg) scale(1.05)`;
+      let dir = null;
+      if (mag >= DEAD_ZONE) {
+        const a = Math.atan2(dy, dx);
+        let best = Infinity;
+        for (const p of drag.angles) { const diff = Math.abs(Math.atan2(Math.sin(a - p.a), Math.cos(a - p.a))); if (diff < best) { best = diff; dir = p.d; } }
+      }
+      const heat = clamp((mag - DEAD_ZONE) / (SWIPE_COMMIT - DEAD_ZONE), 0, 1);
+      if (dir !== drag.dir) { if (dir) sound.tick(); drag.dir = dir; drag.ready = false; }
+      for (const d of DIRS) {
+        targets[d].style.setProperty('--hot', d === dir ? heat.toFixed(3) : '0');
+        targets[d].classList.toggle('ready', d === dir && heat >= 1);
+      }
+      if (dir && heat >= 1 && !drag.ready) { drag.ready = true; sound.ready(); buzz(8); }
+      if (S.streak >= 3 && Math.random() < 0.45) fx.sparks(e.clientX + (Math.random() - 0.5) * 30, e.clientY + (Math.random() - 0.5) * 30, 1, COLORS[S.card.color].light, 0.35);
+    };
+    const onUp = e => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const dx = drag.x - drag.x0, dy = drag.y - drag.y0;
+      const mag = Math.hypot(dx, dy), speed = Math.hypot(drag.vx, drag.vy);
+      const dir = drag.dir;
+      const commitIt = dir && (mag >= SWIPE_COMMIT || (mag >= DEAD_ZONE * 3 && speed >= FLICK_SPEED));
+      drag = null;
+      card.classList.remove('dragging');
+      for (const d of DIRS) { targets[d].style.setProperty('--hot', '0'); targets[d].classList.remove('ready'); }
+      if (commitIt) commit(dir);
+      else { springBack(card); armIdle(); }
+    };
+    card.addEventListener('pointerdown', onDown);
+    card.addEventListener('pointermove', onMove);
+    card.addEventListener('pointerup', onUp);
+    card.addEventListener('pointercancel', onUp);
+  }
+  function springBack(card) {
+    const from = card.style.transform || 'none';
+    card.style.transform = '';
+    if (from === 'none' || from === '') return;
+    sound.back();
+    card.animate([{ transform: from }, { transform: 'translate(0,0) rotate(0) scale(1)' }], { duration: D(520), easing: 'cubic-bezier(.2, 1.7, .4, 1)' });
+  }
+  function flyTo(card, dir) {
+    const t = targets[dir].getBoundingClientRect(), w = el.wrap.getBoundingClientRect();
+    const tx = t.left + t.width / 2 - (w.left + w.width / 2);
+    const ty = t.top + t.height / 2 - (w.top + w.height / 2);
+    const scale = (t.width * 0.78) / w.width;
+    const from = card.style.transform || 'translate(0,0) rotate(0) scale(1)';
+    card.style.transform = '';
+    const end = `translate(${tx}px, ${ty}px) rotate(0) scale(${scale})`;
+    const anim = card.animate([{ transform: from }, { transform: end }], { duration: D(300), easing: 'cubic-bezier(.3, .8, .3, 1)', fill: 'forwards' });
+    return anim.finished.catch(() => {}).then(() => end);
+  }
+
+  async function commit(dir) {
+    if (S.busy || S.over || !S.cardEl) return;
+    S.busy = true;
+    timer.stop();
+    const card = S.cardEl; S.cardEl = null;
+    const target = targets[dir];
+    const key = KEYS[DIRS.indexOf(dir)];
     const r = rule();
-    const correct = card[r] === key[r];
-
+    const correct = S.card[r] === key[r];
     S.trials++;
-    await flyTo(pile);
+    clearTimeout(idleTimer);
+    clearGuide();
+    el.wrap.classList.add('empty');
+    sound.whoosh();
 
-    const rect = pile.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top;
+    const end = await flyTo(card, dir);
+    const rect = target.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
 
     if (correct) {
-      S.correct++;
-      S.streak++;
-      S.bestStreak = Math.max(S.bestStreak, S.streak);
-      const bonus = Math.min(S.streak - 1, STREAK_CAP) * STREAK_STEP;
-      const points = BASE_POINTS + bonus;
-      S.score += points;
-      S.lastWasShift = false;
+      S.correct++; S.run++; S.streak++; S.bestStreak = Math.max(S.bestStreak, S.streak);
+      const mult = Math.min(S.streak, MULT_CAP);
+      const points = BASE_POINTS * mult;
+      S.score += points; S.lastWasShift = false; S.coachNext = 'good';
 
-      pile.classList.add('is-good');
-      showMark(pile, true);
-      floatText(`+${points}`, cx, cy);
-      sound.good();
+      target.classList.add('hit-good');
+      fx.sparks(cx, cy, 22 + S.streak * 6, COLORS[S.card.color].light, 0.8 + S.streak * 0.12);
+      floatText(mult > 1 ? `+${points} ×${mult}` : `+${points}`, cx, rect.top - 6);
+      sound.good(S.streak); buzz(12);
+      card.animate([
+        { transform: end, opacity: 1 },
+        { transform: end + ' scale(1.15, .85)', opacity: 1, offset: 0.35 },
+        { transform: end + ' scale(0)', opacity: 0 },
+      ], { duration: D(320), easing: 'cubic-bezier(.4, 0, .6, 1)', fill: 'forwards' });
+      renderPips();
 
-      const cracked = S.streak >= CRITERION;
-      if (cracked) {
+      if (S.run >= S.criterion) {
         await crackRule(cx, cy);
       } else {
-        const line = S.streak >= 4 ? pick(LINES.hot, lastLine) : pick(LINES.correct, lastLine);
-        lastLine = line;
-        say(line, 'happy', 1400);
+        const tier = tierFor(S.streak);
+        toast(tier.text, tier.cls);
+        if (S.streak >= 4) shake(false);
         renderHUD();
-        await wait(D(650) + 50);
+        await wait(D(520) + 40);
       }
     } else {
       S.errors++;
-      if (S.prevRule && card[S.prevRule] === key[S.prevRule]) S.persev++;
-      S.streak = 0;
-      pile.classList.add('is-bad');
-      showMark(pile, false);
-      sound.bad();
+      if (S.prevRule && S.card[S.prevRule] === key[S.prevRule]) S.persev++;
+      S.run = 0; S.streak = 0; S.coachNext = 'wrong';
+      target.classList.add('hit-bad');
+      shake(false);
+      card.animate([
+        { transform: end + ' rotate(0)', opacity: 1 },
+        { transform: end + ' rotate(-9deg)', offset: 0.2 },
+        { transform: end + ' rotate(9deg)', offset: 0.4 },
+        { transform: end + ' rotate(-5deg)', offset: 0.6, opacity: 1 },
+        { transform: end + ' scale(.6)', opacity: 0 },
+      ], { duration: D(520), easing: 'ease-in-out', fill: 'forwards' });
       let line;
-      if (S.lastWasShift && !S.shiftHintGiven) {
-        line = pick(LINES.wrongAfterShift);
-        S.shiftHintGiven = true;
-        say(line, 'smirk', 1800);
+      if (L.penalty) {
+        const lost = Math.min(L.penalty, S.score);
+        S.score -= lost; S.lost += lost;
+        floatText(`-${L.penalty}`, cx, rect.top - 6, 'neg');
+        line = pick(LINES.ouch, lastLine);
+        sound.ouch(); buzz([40, 50, 40]);
       } else {
-        line = pick(LINES.wrong, lastLine);
-        say(line, 'sad', 1300);
+        sound.bad(); buzz([30, 40, 30]);
+        if (L.announce && S.lastWasShift && !S.shiftHintGiven) { line = pick(LINES.shift); S.shiftHintGiven = true; }
+        else line = pick(LINES.bad, lastLine);
       }
       lastLine = line;
-      renderHUD();
-      await wait(D(850) + 50);
+      toast(line, 'bad');
+      renderPips(); renderHUD();
+      await wait(D(720) + 40);
     }
 
-    pile.classList.remove('is-good', 'is-bad');
+    target.classList.remove('hit-good', 'hit-bad');
+    card.remove();
     deal();
   }
 
   async function crackRule(cx, cy) {
-    S.categories++;
-    S.score += CATEGORY_BONUS;
-    S.prevRule = rule();
-    S.ruleIdx = (S.ruleIdx + 1) % RULES.length;
-    S.streak = 0;
-    S.lastWasShift = true;
-    S.shiftHintGiven = false;
-    renderHUD();
+    S.categories++; S.score += CATEGORY_BONUS;
+    S.prevRule = rule(); S.ruleIdx = (S.ruleIdx + 1) % RULES.length;
+    S.run = 0; S.criterion = newCriterion();
+    S.lastWasShift = true; S.shiftHintGiven = false; S.coachNext = 'shift';
 
-    if (S.classic) {
-      // Classic test: the rule changes silently.
-      const line = pick(LINES.correct, lastLine);
-      lastLine = line;
-      say(line, 'happy', 1400);
-      await wait(D(650) + 50);
+    if (!L.announce) {
+      // Silent switch: nothing on screen gives the change away.
+      const tier = tierFor(S.streak);
+      toast(tier.text, tier.cls);
+      renderPips(); renderHUD();
+      await wait(D(520) + 40);
       return;
     }
-    const line = pick(LINES.cracked, lastLine);
-    lastLine = line;
-    say(line, 'wow', 2200);
-    sound.level();
-    floatText(`Rule cracked! +${CATEGORY_BONUS}`, innerWidth / 2, innerHeight * 0.42, true);
-    confetti.burst(cx, cy, 70, 0.8);
-    confetti.burst(innerWidth / 2, innerHeight * 0.35, 110, 1.2);
-    await wait(D(1500));
-    if (S.categories < MAX_CATEGORIES) {
-      const tease = pick(LINES.crackedTease);
-      say(tease, 'smirk', 1600);
-      await wait(D(500));
-    }
+    renderPips(true);
+    toast('Rule cracked!', 'big');
+    voice.say('Rule cracked');
+    floatText(`+${CATEGORY_BONUS}`, cx, cy - 20);
+    sound.level(); buzz([20, 30, 20, 30, 60]); shake(true);
+    fx.confetti(innerWidth / 2, innerHeight * 0.4, 130, 1.2);
+    fx.sparks(innerWidth / 2, innerHeight * 0.5, 40, null, 1.6);
+    ['up', 'right', 'down', 'left'].forEach((d, i) => setTimeout(() => {
+      replay(targets[d], 'wave');
+      targets[d].addEventListener('animationend', () => targets[d].classList.remove('wave'), { once: true });
+    }, i * 90));
+    renderHUD();
+    await wait(D(650));
+    renderStars(true); sound.star();
+    await wait(D(800));
   }
 
   // ---------- Start / end ----------
-  function startGame() {
-    sound.ensure();
-    sound.click();
+  function startGame(levelId = progress.p.last) {
+    L = LEVELS[clamp(levelId, 0, LEVELS.length - 1)] || LEVELS[1];
+    progress.p.last = L.id; progress.save();
+    sound.ensure(); sound.pop(); voice.load();
+    buildBoard(L.piles || 4);
+    timer.stop();
+    el.timeStat.classList.toggle('hidden', !L.timer);
+    el.timer.classList.toggle('hidden', !L.timer);
+    if (L.timer) { sizeTimer(); el.time.textContent = L.timer.start.toFixed(1); el.timerRect.style.strokeDashoffset = '0'; }
     reset();
+    el.levelChip.textContent = L.id === 0 ? 'Tutorial' : `Level ${L.id} · ${L.name}`;
+    el.ruleChip.classList.toggle('on', false);
+    el.coach.classList.add('hidden');
     el.startOverlay.classList.add('hidden');
     el.endOverlay.classList.add('hidden');
-    el.piles.classList.add('locked');
-    say(pick(LINES.intro), 'smirk', 2200);
+    el.center.classList.remove('touched');
+    clearGuide();
+    el.wrap.querySelectorAll('.card').forEach(c => c.remove());
+    replay(el.board, 'in');
+    setTimeout(() => el.board.classList.remove('in'), D(1100) + 50);
+    DIRS.forEach((d, i) => setTimeout(() => sound.tick(), D(70) * i));
     setTimeout(deal, D(700));
   }
-
-  function rankFor() {
-    const acc = S.trials ? S.correct / S.trials : 0;
-    if (S.categories >= MAX_CATEGORIES && acc >= 0.85) return ['Grandmaster Sorter', '🏆'];
-    if (S.categories >= MAX_CATEGORIES) return ['Rule Whisperer', '🧠'];
-    if (S.categories >= 4) return ['Card Shark', '🦈'];
-    if (S.categories >= 2) return ['Quick Learner', '⚡'];
-    return ['Rule Rookie', '🌱'];
-  }
-
-  async function endGame() {
-    S.over = true;
-    S.busy = true;
-    const won = S.categories >= MAX_CATEGORIES;
-    const acc = S.trials ? Math.round((S.correct / S.trials) * 100) : 0;
-    const [rank, icon] = rankFor();
-
-    say(pick(won ? LINES.winEnd : LINES.deckEnd), won ? 'wow' : 'happy', 3000);
-    if (won) {
-      sound.win();
-      confetti.burst(innerWidth * 0.3, innerHeight * 0.3, 120, 1.3);
-      confetti.burst(innerWidth * 0.7, innerHeight * 0.3, 120, 1.3);
-    }
-    await wait(D(1200));
-
-    el.endEyebrow.textContent = won ? 'You beat the dealer' : "Deck's out";
-    el.endTitle.textContent = won ? 'All rules cracked!' : 'Game over';
-    el.endRank.textContent = `${icon} ${rank}`;
-    const rows = [
-      [S.score, 'Score'],
-      [`${acc}%`, 'Accuracy'],
-      [`${S.categories}/${MAX_CATEGORIES}`, 'Rules cracked'],
-      [S.bestStreak, 'Best streak'],
-      [S.trials, 'Cards sorted'],
-      [S.persev, 'Stuck on old rule'],
-    ];
-    el.endResults.innerHTML = rows.map(([v, l]) =>
-      `<div class="result"><div class="result__value">${v}</div><div class="result__label">${l}</div></div>`
-    ).join('');
-    el.endOverlay.classList.remove('hidden');
-    el.againBtn.focus();
-  }
-
-  el.startBtn.addEventListener('click', startGame);
-  document.getElementById('home-btn').addEventListener('click', () => {
-    S.over = true; S.busy = true;
+  function showLevels() {
+    renderLevels();
     el.endOverlay.classList.add('hidden');
     el.startOverlay.classList.remove('hidden');
-  });
-  el.againBtn.addEventListener('click', startGame);
+  }
+  function rankFor() {
+    const acc = S.trials ? S.correct / S.trials : 0;
+    if (S.categories >= L.categories && acc >= 0.85) return '🏆 Sugar Sage';
+    if (S.categories >= L.categories) return '🍭 Candy Shark';
+    if (S.categories >= Math.ceil(L.categories * 0.66)) return '🍬 Sweet Tooth';
+    if (S.categories >= Math.ceil(L.categories * 0.33)) return '🍩 Quick Nibbler';
+    return '🍪 Gumdrop';
+  }
+  async function endGame() {
+    S.over = true; S.busy = true;
+    timer.stop();
+    clearTimeout(idleTimer); clearGuide();
+    renderHUD();
+    el.coach.classList.add('hidden');
+    const won = S.categories >= L.categories;
+    const acc = S.trials ? Math.round((S.correct / S.trials) * 100) : 0;
+    const p = progress.p;
+    const nextId = L.id + 1;
+    let unlockedNow = false;
+    if (won && nextId < LEVELS.length && p.unlocked < nextId) { p.unlocked = nextId; }
+    if (!p.best[L.id] || S.score > p.best[L.id]) p.best[L.id] = S.score;
+    progress.save();
 
+    if (won) {
+      sound.win();
+      fx.confetti(innerWidth * 0.3, innerHeight * 0.3, 120, 1.3);
+      fx.confetti(innerWidth * 0.7, innerHeight * 0.3, 120, 1.3);
+    }
+    await wait(D(900));
+    el.endEyebrow.textContent = L.id === 0 ? 'Tutorial' : `Level ${L.id} · ${L.name}`;
+    const title = L.guided ? (won ? "You're ready!" : 'Nice warm-up') : won ? 'Sweet victory!' : "Deck's out";
+    el.endTitle.textContent = title; el.endTitle.dataset.text = title;
+    el.endRank.textContent = rankFor();
+    el.endUnlock.textContent = unlockedNow ? `🔓 Level ${nextId} unlocked: ${LEVELS[nextId].name}` : '';
+    el.endUnlock.classList.toggle('hidden', !unlockedNow);
+    const rows = [[0, 'Score'], [`${acc}%`, 'Accuracy'], [`${S.categories}/${L.categories}`, 'Rules cracked'], [S.bestStreak, 'Best streak'], [S.trials, 'Cards sorted']];
+    rows.push(L.timer ? [S.timeouts, 'Timed out'] : L.penalty ? [`-${S.lost}`, 'Lost to mistakes'] : [S.persev, 'Stuck on old rule']);
+    el.endResults.innerHTML = rows.map(([v, l], i) =>
+      `<div class="result" style="--i:${i}"><div class="result__value">${v}</div><div class="result__label">${l}</div></div>`).join('');
+    endStarEls.forEach((s, i) => { s.classList.remove('lit'); s.style.display = i < L.categories ? '' : 'none'; });
+    el.nextBtn.classList.toggle('hidden', !(nextId < LEVELS.length));
+    el.nextBtn.textContent = L.id === 0 ? 'Start level 1' : `Next: level ${nextId}`;
+    el.endOverlay.classList.remove('hidden');
+    (el.nextBtn.classList.contains('hidden') ? el.againBtn : el.nextBtn).focus();
+    if (L.guided && won) voice.say("You're ready", 'tutorial-complete');
+    else if (won) voice.say(unlockedNow ? 'Level up' : 'Sweet victory');
+
+    const scoreEl = el.endResults.querySelector('.result__value');
+    const t0 = performance.now(), dur = D(900) || 1, total = S.score;
+    let lastTick = 0;
+    const roll = t => {
+      const k = Math.min(1, (t - t0) / dur);
+      scoreEl.textContent = Math.round(total * (1 - Math.pow(1 - k, 3)));
+      if (t - lastTick > 45 && k < 1) { sound.count(); lastTick = t; }
+      if (k < 1) requestAnimationFrame(roll);
+    };
+    requestAnimationFrame(roll);
+    setTimeout(() => { scoreEl.textContent = total; }, dur + 80);
+    for (let i = 0; i < S.categories; i++) {
+      setTimeout(() => {
+        endStarEls[i].classList.add('lit');
+        sound.chime(784 * Math.pow(2, i * 2 / 12), 0.3, 0.05);
+        const r = endStarEls[i].getBoundingClientRect();
+        fx.sparks(r.left + r.width / 2, r.top + r.height / 2, 14, '#fde047', 0.7);
+      }, D(350) + i * D(160));
+    }
+  }
+
+  el.nextBtn.addEventListener('click', () => startGame(L.id + 1));
+  el.againBtn.addEventListener('click', () => startGame(L.id));
+  el.levelsBtn.addEventListener('click', showLevels);
+  $('home-btn').addEventListener('click', () => { sound.pop(); clearTimeout(idleTimer); timer.stop(); S.over = true; showLevels(); });
+
+  const KEY_DIR = { ArrowUp: 'up', ArrowLeft: 'left', ArrowRight: 'right', ArrowDown: 'down', w: 'up', a: 'left', d: 'right', s: 'down' };
   document.addEventListener('keydown', e => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
-    if (!el.startOverlay.classList.contains('hidden') || !el.endOverlay.classList.contains('hidden')) {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startGame(); }
-      return;
-    }
-    if (e.key >= '1' && e.key <= '4') { e.preventDefault(); choose(Number(e.key) - 1); }
+    const startUp = !el.startOverlay.classList.contains('hidden');
+    const endUp = !el.endOverlay.classList.contains('hidden');
+    if (startUp) { if (e.key === 'Enter') { e.preventDefault(); startGame(progress.p.last); } return; }
+    if (endUp) { if (e.key === 'Enter') { e.preventDefault(); (el.nextBtn.classList.contains('hidden') ? el.againBtn : el.nextBtn).click(); } return; }
+    let dir = KEY_DIR[e.key] || KEY_DIR[e.key.toLowerCase()];
+    const num = Number(e.key);
+    if (num >= 1 && num <= DIRS.length) dir = DIRS[num - 1];
+    if (dir && DIRS.includes(dir)) { e.preventDefault(); el.center.classList.add('touched'); commit(dir); }
     if (e.key === 'm' || e.key === 'M') sound.toggle();
   });
 
+  renderLevels();
   reset();
-
-  // Dev hook: open index.html?debug to poke at the game from the console.
-  if (location.search.includes('debug')) window.cardSorter = { state: S, deal, choose, endGame, crackRule };
+  if (location.search.includes('debug')) window.sweetSort = { state: S, level: () => L, LEVELS, timer, deal, commit, endGame, crackRule, toast, shake, voice, armIdle, startGame, progress };
 })();
