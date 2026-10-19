@@ -365,6 +365,7 @@ body.menu .table, body.menu .stats, body.menu .progress { visibility: hidden; }
 
 /* ---------- Splash ---------- */
 .overlay.splash { background: rgba(9, 4, 26, .28); backdrop-filter: none; display: grid; place-items: center; overflow: hidden; }
+.overlay.splash.hidden { display: none; }
 .splash__hero { position: absolute; inset: 0; pointer-events: none; }
 .hero-sweet { position: absolute; transform: translate(-50%, -50%) rotate(var(--r)); animation: hero-bob var(--d) ease-in-out var(--delay) infinite alternate; }
 .hero-sweet svg { display: block; width: 100%; height: auto; overflow: visible; }
