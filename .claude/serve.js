@@ -10,9 +10,20 @@ http.createServer((req, res) => {
   if (p.endsWith('/')) p += 'index.html';
   const file = path.normalize(path.join(root, p));
   if (!file.startsWith(root)) { res.writeHead(403); return res.end(); }
-  fs.readFile(file, (err, data) => {
-    if (err) { res.writeHead(404); return res.end('not found'); }
-    res.writeHead(200, { 'Content-Type': types[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
-    res.end(data);
+  fs.stat(file, (err, st) => {
+    if (err || !st.isFile()) { res.writeHead(404); return res.end('not found'); }
+    const type = types[path.extname(file)] || 'application/octet-stream';
+    const head = { 'Content-Type': type, 'Cache-Control': 'no-store', 'Accept-Ranges': 'bytes' };
+    const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
+    if (range) {
+      // Byte ranges, so browsers can seek video and audio.
+      let start = range[1] ? Number(range[1]) : 0, end = range[2] ? Number(range[2]) : st.size - 1;
+      if (!range[1]) { start = Math.max(0, st.size - Number(range[2])); end = st.size - 1; }
+      if (start > end || end >= st.size) { res.writeHead(416, { 'Content-Range': 'bytes */' + st.size }); return res.end(); }
+      res.writeHead(206, { ...head, 'Content-Range': `bytes ${start}-${end}/${st.size}`, 'Content-Length': end - start + 1 });
+      return fs.createReadStream(file, { start, end }).pipe(res);
+    }
+    res.writeHead(200, { ...head, 'Content-Length': st.size });
+    fs.createReadStream(file).pipe(res);
   });
 }).listen(port, () => console.log('serving ' + root + ' on http://localhost:' + port));
